@@ -1,6 +1,9 @@
-# Quantify - AI-Powered Quantitative Investment Platform
+# Quantify 701 - AI-Powered Quantitative Investment Platform
 
-**Quantify** is an AI-powered quantitative investment platform by **The Studio 701 LLC** that uses free data sources to select and analyze stocks based on technical analysis, quantitative filters, and artificial intelligence.
+**Quantify 701** is an AI-powered quantitative investment platform by **The Studio 701 LLC** that uses free data sources to select and analyze stocks based on technical analysis, quantitative filters, and artificial intelligence.
+
+🌐 **Live App**: [https://quantify701.streamlit.app/](https://quantify701.streamlit.app/)  
+📦 **GitHub**: [https://github.com/kevintan701/quantify701](https://github.com/kevintan701/quantify701)
 
 ## Features
 

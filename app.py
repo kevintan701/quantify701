@@ -23,7 +23,7 @@ import config
 
 
 # Page configuration
-APP_NAME = "Quantify"
+APP_NAME = "Quantify 701"
 APP_BRAND = "The Studio 701 LLC"
 APP_TAGLINE = "Quantify Your Investment Decisions"
 
@@ -31,7 +31,12 @@ st.set_page_config(
     page_title=APP_NAME,
     page_icon="📈",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
+    menu_items={
+        'Get Help': 'https://github.com/kevintan701/quantify701',
+        'Report a bug': 'https://github.com/kevintan701/quantify701/issues',
+        'About': f"{APP_NAME} - {APP_TAGLINE}\n\nPowered by {APP_BRAND}"
+    }
 )
 
 # Enhanced CSS for modern, professional styling

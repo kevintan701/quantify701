@@ -1,12 +1,15 @@
-# Deployment Guide - Web-Based Stock Selector App
+# Deployment Guide - Quantify 701
 
-This app is built with Streamlit and can be deployed to various cloud platforms to make it accessible from anywhere on the web.
+**Quantify 701** is built with Streamlit and deployed on Streamlit Cloud.
+
+## Live App
+
+🌐 **Live URL**: [https://quantify701.streamlit.app/](https://quantify701.streamlit.app/)  
+📦 **GitHub**: [https://github.com/kevintan701/quantify701](https://github.com/kevintan701/quantify701)
 
 ## Current Status
 
-The app is **already web-based** - when you run `streamlit run app.py`, it creates a local web server accessible at `http://localhost:8501`.
-
-To make it **publicly accessible** on the internet, you need to deploy it to a cloud platform.
+The app is deployed and publicly accessible. When running locally, it creates a web server at `http://localhost:8501`.
 
 ## Deployment Options
 
