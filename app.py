@@ -1307,7 +1307,7 @@ TOTAL_STOCKS = {len(config.STOCK_UNIVERSE)}
     
     # Enhanced Footer
     st.markdown("---")
-    footer_col1, footer_col2, footer_col3 = st.columns(3)
+    footer_col1, footer_col2, footer_col3, footer_col4 = st.columns(4)
     
     with footer_col1:
         st.markdown(
@@ -1326,6 +1326,14 @@ TOTAL_STOCKS = {len(config.STOCK_UNIVERSE)}
         )
     
     with footer_col3:
+        st.markdown(
+            f"<div style='text-align: center; color: #666; font-size: 0.9rem;'>"
+            f"🌐 Live App:<br><a href='https://quantify701.streamlit.app/' target='_blank' style='color: #667eea;'>quantify701.streamlit.app</a>"
+            f"</div>",
+            unsafe_allow_html=True
+        )
+    
+    with footer_col4:
         st.markdown(
             "<div style='text-align: center; color: #666; font-size: 0.9rem;'>"
             "⚠️ Not financial advice<br>Do your own research"
