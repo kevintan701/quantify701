@@ -727,27 +727,6 @@ def main():
         f'Powered by {APP_BRAND}</p>',
         unsafe_allow_html=True
     )
-    # Add a prominent settings indicator at the top
-    settings_col1, settings_col2 = st.columns([3, 1])
-    with settings_col1:
-        st.markdown("""
-        <div style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%); 
-                    padding: 1rem; border-radius: 8px; border-left: 4px solid #667eea; margin-bottom: 1rem;">
-            <p style="margin: 0; color: #667eea; font-weight: 600;">
-                ⚙️ <strong>Settings Panel Available!</strong> 
-                Click the <strong>☰</strong> menu button in the top-left corner (or press <kbd>Ctrl+I</kbd>) 
-                to access strategy presets, custom filters, and analysis options.
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-    with settings_col2:
-        st.markdown("""
-        <div style="text-align: center; padding: 1rem;">
-            <div style="font-size: 2rem; margin-bottom: 0.5rem;">⚙️</div>
-            <div style="font-size: 0.85rem; color: #667eea; font-weight: 600;">Settings</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
     st.markdown("---")
     
     # Sidebar for controls with enhanced organization
