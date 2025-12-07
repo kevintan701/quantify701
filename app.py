@@ -486,13 +486,25 @@ def get_strategy_presets():
 
 
 @st.cache_data(ttl=3600)  # Cache for 1 hour
-def get_stock_data(custom_filters=None):
-    """Fetch and analyze stocks with caching."""
+def get_stock_data(custom_filters=None, period="1y", interval="1d"):
+    """
+    Fetch and analyze stocks with caching.
+    
+    Args:
+        custom_filters: Custom filter parameters
+        period: Time period for data ("1d", "5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "10y", "ytd", "max")
+        interval: Data interval ("1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h", "1d", "5d", "1wk", "1mo", "3mo")
+    """
     data_fetcher = DataFetcher()
     stock_selector = StockSelector(data_fetcher)
     
-    # Fetch and analyze stocks
-    qualified_stocks = stock_selector.filter_stocks(config.STOCK_UNIVERSE, custom_filters=custom_filters)
+    # Fetch and analyze stocks with specified time range
+    qualified_stocks = stock_selector.filter_stocks(
+        config.STOCK_UNIVERSE, 
+        custom_filters=custom_filters,
+        period=period,
+        interval=interval
+    )
     
     return qualified_stocks, data_fetcher
 
@@ -764,6 +776,50 @@ def main():
         
         st.markdown("---")
         
+        # Time Range Settings
+        st.markdown("### ⏱️ Time Range Settings")
+        
+        # Period selector (time range)
+        period_options = {
+            "1 Month": "1mo",
+            "3 Months": "3mo",
+            "6 Months": "6mo",
+            "1 Year": "1y",
+            "2 Years": "2y",
+            "5 Years": "5y",
+            "10 Years": "10y",
+            "Year to Date": "ytd",
+            "Maximum Available": "max"
+        }
+        
+        selected_period_label = st.selectbox(
+            "Time Period",
+            options=list(period_options.keys()),
+            index=3,  # Default to "1 Year"
+            help="Select the historical time period for analysis. Longer periods provide more data but may include outdated trends."
+        )
+        selected_period = period_options[selected_period_label]
+        
+        # Interval selector (data frequency)
+        interval_options = {
+            "Daily": "1d",
+            "Weekly": "1wk",
+            "Monthly": "1mo",
+            "Quarterly": "3mo"
+        }
+        
+        selected_interval_label = st.selectbox(
+            "Data Interval",
+            options=list(interval_options.keys()),
+            index=0,  # Default to "Daily"
+            help="Select the data frequency. Daily provides most detail, while weekly/monthly smooths out short-term volatility."
+        )
+        selected_interval = interval_options[selected_interval_label]
+        
+        st.caption(f"📊 Analyzing data: {selected_period_label} period with {selected_interval_label.lower()} intervals")
+        
+        st.markdown("---")
+        
         use_custom = st.checkbox(
             "🔧 Use custom filters", 
             value=False, 
@@ -915,18 +971,35 @@ def main():
             st.rerun()
     
     # Initialize system with enhanced loading state
-    if 'qualified_stocks' not in st.session_state or refresh_data or 'custom_filters' not in st.session_state or st.session_state.get('custom_filters') != custom_filters:
+    # Check if we need to refresh (new filters, period, interval, or strategy)
+    needs_refresh = (
+        'qualified_stocks' not in st.session_state or 
+        refresh_data or 
+        'custom_filters' not in st.session_state or 
+        st.session_state.get('custom_filters') != custom_filters or
+        st.session_state.get('period') != selected_period or
+        st.session_state.get('interval') != selected_interval or
+        st.session_state.get('selected_strategy') != selected_strategy
+    )
+    
+    if needs_refresh:
         # Show loading state
-        with st.spinner("🔄 **Analyzing stocks...** This may take a minute. Fetching data and calculating technical indicators."):
-            qualified_stocks, data_fetcher = get_stock_data(custom_filters=custom_filters)
+        with st.spinner(f"🔄 **Analyzing stocks...** Fetching {selected_period_label.lower()} data with {selected_interval_label.lower()} intervals. This may take a minute."):
+            qualified_stocks, data_fetcher = get_stock_data(
+                custom_filters=custom_filters,
+                period=selected_period,
+                interval=selected_interval
+            )
         
         # Show success message briefly
-        success_msg = st.success(f"✅ **Analysis complete!** Found {len(qualified_stocks)} qualified stocks.")
+        success_msg = st.success(f"✅ **Analysis complete!** Found {len(qualified_stocks)} qualified stocks using {selected_period_label.lower()} data.")
         
         st.session_state.qualified_stocks = qualified_stocks
         st.session_state.data_fetcher = data_fetcher
         st.session_state.custom_filters = custom_filters
         st.session_state.selected_strategy = selected_strategy
+        st.session_state.period = selected_period
+        st.session_state.interval = selected_interval
     else:
         qualified_stocks = st.session_state.qualified_stocks
         data_fetcher = st.session_state.data_fetcher
@@ -1696,11 +1769,16 @@ def main():
         st.subheader("📡 Data Sources")
         st.markdown(f"""
         - **Data Provider**: Yahoo Finance (via yfinance library)
-        - **Lookback Period**: {config.LOOKBACK_PERIOD_DAYS} trading days (1 year)
+        - **Time Range**: Configurable in sidebar (1 month to 10 years, or maximum available)
+        - **Data Interval**: Configurable (Daily, Weekly, Monthly, Quarterly)
         - **Update Frequency**: Every {config.UPDATE_INTERVAL_HOURS} hour(s)
         - **Stock Universe**: {len(config.STOCK_UNIVERSE)} stocks (configurable in config.py)
         
-        All data is fetched in real-time and cached to minimize API calls.
+        **Time Range Options:**
+        - **Period**: 1 Month, 3 Months, 6 Months, 1 Year, 2 Years, 5 Years, 10 Years, Year to Date, or Maximum Available
+        - **Interval**: Daily (most detailed), Weekly, Monthly, or Quarterly (smoothed)
+        
+        All data is fetched in real-time and cached to minimize API calls. Different time ranges are cached separately for optimal performance.
         """)
         
         st.markdown("---")

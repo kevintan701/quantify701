@@ -46,13 +46,21 @@ class StockSelector:
         """
         self.filter_params.update(kwargs)
     
-    def filter_stocks(self, symbols: List[str], custom_filters: Optional[Dict] = None) -> List[Dict]:
+    def filter_stocks(
+        self, 
+        symbols: List[str], 
+        custom_filters: Optional[Dict] = None,
+        period: str = "1y",
+        interval: str = "1d"
+    ) -> List[Dict]:
         """
         Filter stocks based on quantitative criteria.
         
         Args:
             symbols: List of stock symbols to evaluate
             custom_filters: Optional dictionary of custom filter parameters
+            period: Time period for data ("1d", "5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "10y", "ytd", "max")
+            interval: Data interval ("1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h", "1d", "5d", "1wk", "1mo", "3mo")
         
         Returns:
             List of dictionaries with stock data and scores
@@ -69,8 +77,8 @@ class StockSelector:
         
         for symbol in symbols:
             try:
-                # Get stock data
-                data = self.data_fetcher.get_stock_data(symbol, period="1y")
+                # Get stock data with specified period and interval
+                data = self.data_fetcher.get_stock_data(symbol, period=period, interval=interval)
                 if data is None or data.empty:
                     continue
                 
