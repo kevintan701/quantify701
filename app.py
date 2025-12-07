@@ -796,7 +796,7 @@ def main():
             st.markdown("### 🔧 Custom Filter Settings")
             st.caption("Adjust these parameters to fine-tune your stock selection criteria.")
             
-            with st.expander("📊 Market Filters", expanded=False, icon="📊"):
+            with st.expander("Market Filters", expanded=False, icon="📊"):
                 min_market_cap = st.number_input(
                     "Min Market Cap (B)", 
                     min_value=1.0, 
@@ -815,7 +815,7 @@ def main():
                     help="Minimum daily trading volume"
                 )
             
-            with st.expander("💰 Price Filters", expanded=False, icon="💰"):
+            with st.expander("Price Filters", expanded=False, icon="💰"):
                 min_price = st.number_input(
                     "Min Price ($)", 
                     min_value=1.0, 
@@ -831,7 +831,7 @@ def main():
                     step=10.0
                 )
             
-            with st.expander("📈 Technical Filters", expanded=False, icon="📈"):
+            with st.expander("Technical Filters", expanded=False, icon="📈"):
                 min_rsi = st.slider(
                     "Min RSI", 
                     min_value=0, 
