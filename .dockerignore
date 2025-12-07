@@ -1,0 +1,24 @@
+# Docker ignore file
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info
+dist/
+build/
+.git/
+.gitignore
+.DS_Store
+*.log
+.env
+.venv
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
