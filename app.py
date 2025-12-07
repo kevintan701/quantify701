@@ -541,8 +541,15 @@ def create_stocks_dataframe(stocks):
     return pd.DataFrame(data)
 
 
-def create_price_chart(stock_data, symbol):
-    """Create interactive price chart with technical indicators."""
+def create_price_chart(stock_data, symbol, chart_type='candlestick'):
+    """
+    Create interactive price chart with technical indicators.
+    
+    Args:
+        stock_data: Stock data dictionary
+        symbol: Stock symbol
+        chart_type: 'candlestick' or 'line' - type of price chart to display
+    """
     data = stock_data['data']
     if data is None or data.empty:
         return None
@@ -556,17 +563,42 @@ def create_price_chart(stock_data, symbol):
         row_heights=[0.5, 0.25, 0.25]
     )
     
-    # Price and moving averages with enhanced colors
-    fig.add_trace(
-        go.Scatter(
-            x=data.index, 
-            y=data['Close'], 
-            name='Price', 
-            line=dict(color='#667eea', width=2.5),
-            hovertemplate='<b>Price</b><br>$%{y:.2f}<extra></extra>'
-        ),
-        row=1, col=1
-    )
+    # Price chart - Candlestick or Line
+    if chart_type == 'candlestick' and all(col in data.columns for col in ['Open', 'High', 'Low', 'Close']):
+        # Add candlestick chart
+        fig.add_trace(
+            go.Candlestick(
+                x=data.index,
+                open=data['Open'],
+                high=data['High'],
+                low=data['Low'],
+                close=data['Close'],
+                name='Price',
+                increasing_line_color='#10b981',  # Green for up candles
+                decreasing_line_color='#ef4444',   # Red for down candles
+                increasing_fillcolor='#10b981',
+                decreasing_fillcolor='#ef4444',
+                line=dict(width=1),
+                hovertemplate='<b>%{x}</b><br>' +
+                             'Open: $%{open:.2f}<br>' +
+                             'High: $%{high:.2f}<br>' +
+                             'Low: $%{low:.2f}<br>' +
+                             'Close: $%{close:.2f}<extra></extra>'
+            ),
+            row=1, col=1
+        )
+    else:
+        # Fallback to line chart if candlestick data not available or chart_type is 'line'
+        fig.add_trace(
+            go.Scatter(
+                x=data.index, 
+                y=data['Close'], 
+                name='Price', 
+                line=dict(color='#667eea', width=2.5),
+                hovertemplate='<b>Price</b><br>$%{y:.2f}<extra></extra>'
+            ),
+            row=1, col=1
+        )
     
     if 'SMA_20' in data.columns:
         fig.add_trace(
@@ -713,7 +745,8 @@ def create_price_chart(stock_data, symbol):
         zeroline=False,
         showline=True,
         linewidth=1,
-        linecolor='rgba(0,0,0,0.1)'
+        linecolor='rgba(0,0,0,0.1)',
+        rangeslider=dict(visible=False)  # Hide range slider for cleaner look
     )
     fig.update_yaxes(
         showgrid=True, 
@@ -724,6 +757,10 @@ def create_price_chart(stock_data, symbol):
         linewidth=1,
         linecolor='rgba(0,0,0,0.1)'
     )
+    
+    # For candlestick charts, update the first subplot y-axis title
+    if chart_type == 'candlestick' and all(col in data.columns for col in ['Open', 'High', 'Low', 'Close']):
+        fig.update_yaxes(title_text="Price ($)", row=1, col=1)
     
     return fig
 
@@ -906,6 +943,19 @@ def main():
         
         st.markdown("---")
         
+        # Chart Display Options
+        st.markdown("### 📈 Chart Display Options")
+        chart_type = st.radio(
+            "Price Chart Type",
+            options=["Candlestick", "Line"],
+            index=0,  # Default to Candlestick
+            help="Choose between candlestick chart (shows OHLC) or line chart (closing prices only). Candlestick provides more detail about price action.",
+            horizontal=True
+        )
+        chart_type_lower = chart_type.lower()
+        
+        st.markdown("---")
+        
         # Analysis options with better labels
         st.markdown("### 📊 Analysis Options")
         top_n = st.slider(
@@ -1000,9 +1050,13 @@ def main():
         st.session_state.selected_strategy = selected_strategy
         st.session_state.period = selected_period
         st.session_state.interval = selected_interval
+        st.session_state.chart_type = chart_type_lower
     else:
         qualified_stocks = st.session_state.qualified_stocks
         data_fetcher = st.session_state.data_fetcher
+        # Update chart type if changed
+        if 'chart_type' not in st.session_state or st.session_state.get('chart_type') != chart_type_lower:
+            st.session_state.chart_type = chart_type_lower
     
     if not qualified_stocks:
         st.error("No qualified stocks found. Please check your configuration.")
@@ -1231,7 +1285,9 @@ def main():
                     
                     # Show chart
                     st.markdown("#### 📊 Price Chart & Technical Analysis")
-                    chart = create_price_chart(stock, stock['symbol'])
+                    # Get chart type from session state or use default
+                    current_chart_type = st.session_state.get('chart_type', 'candlestick')
+                    chart = create_price_chart(stock, stock['symbol'], chart_type=current_chart_type)
                     if chart:
                         st.plotly_chart(chart, use_container_width=True, key=f"chart_buy_{stock['symbol']}_{i}")
         else:
@@ -1390,7 +1446,9 @@ def main():
                 # Price chart with enhanced styling
                 st.markdown("---")
                 st.markdown("#### 📈 Price Chart & Technical Analysis")
-                chart = create_price_chart(selected_stock, selected_symbol)
+                # Get chart type from session state or use default
+                current_chart_type = st.session_state.get('chart_type', 'candlestick')
+                chart = create_price_chart(selected_stock, selected_symbol, chart_type=current_chart_type)
                 if chart:
                     st.plotly_chart(chart, use_container_width=True, key=f"chart_detail_{selected_symbol}")
                 
