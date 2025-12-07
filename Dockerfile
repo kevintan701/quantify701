@@ -1,4 +1,9 @@
 # Dockerfile for deploying the Stock Selector app
+# 
+# NOTE: This is ONLY for deployment to cloud platforms (AWS, Google Cloud, etc.)
+# For local development, you DON'T need Docker - just use a virtual environment!
+# See LOCAL_DEVELOPMENT.md for local development instructions.
+#
 FROM python:3.11-slim
 
 # Set working directory

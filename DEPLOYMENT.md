@@ -11,6 +11,17 @@
 
 The app is deployed and publicly accessible. When running locally, it creates a web server at `http://localhost:8501`.
 
+## ⚠️ Important: Local Development vs Deployment
+
+**For Local Development:**
+- ✅ Use a virtual environment (NO Docker needed!)
+- ✅ Run `streamlit run app.py` directly
+- ✅ See [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md) for details
+
+**For Deployment:**
+- Docker is optional (only needed for certain cloud platforms)
+- Streamlit Cloud doesn't use Docker - it runs your code directly
+
 ## Deployment Options
 
 ### Option 1: Streamlit Cloud (Easiest & Free) ⭐ Recommended
@@ -122,7 +133,9 @@ Deploy to a VPS (Virtual Private Server) for full control.
 
 ### Option 4: Docker + Cloud Platform
 
-Containerize the app for easier deployment.
+**⚠️ Note:** Docker is ONLY needed if you're deploying to platforms that require containers. For local development, use a virtual environment instead (see [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md)).
+
+Containerize the app for easier deployment to container-based platforms.
 
 #### Create `Dockerfile`:
 

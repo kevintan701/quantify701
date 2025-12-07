@@ -23,7 +23,15 @@
 
 ## Installation
 
-1. Create a virtual environment (recommended):
+**🚀 Quick Start (No Docker Required!):**
+
+**Option 1: Automated Setup (Easiest)**
+```bash
+./setup_local.sh
+```
+
+**Option 2: Manual Setup**
+1. Create a virtual environment:
 ```bash
 python3 -m venv venv
 source venv/bin/activate  # On macOS/Linux
@@ -37,6 +45,8 @@ pip install -r requirements.txt
 ```
 
 **Note**: If you're using Python 3.14+ on macOS, you may need to use a virtual environment due to externally-managed environment restrictions.
+
+**💡 Docker is Optional:** The `Dockerfile` in this repo is only for deployment to cloud platforms. For local development, just use the virtual environment method above. See [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md) for details.
 
 ## Configuration
 
@@ -55,27 +65,35 @@ source venv/bin/activate  # On macOS/Linux
 venv\Scripts\activate  # On Windows
 ```
 
-### Option 1: Interactive Web UI (Recommended)
+### Option 1: Interactive Web UI (Recommended) 🚀
 
-Run the Streamlit web application for an interactive, user-friendly interface:
-
+**Quick Start:**
 ```bash
+# 1. Activate virtual environment
+source venv/bin/activate
+
+# 2. Run the app
 streamlit run app.py
 ```
 
-Or use the convenience script:
+**Or use the convenience script:**
 ```bash
 ./run_app.sh
 ```
 
-The web UI provides:
+The app will automatically open in your browser at **`http://localhost:8501`**
+
+**The web UI provides:**
 - 📊 Interactive stock rankings table
 - 📈 Real-time charts with technical indicators
 - 🔍 Detailed stock analysis
+- 🤖 AI-powered insights and recommendations
 - ⚙️ Customizable filters and settings
 - 📥 Export data to CSV
 
-The app will open in your default web browser at `http://localhost:8501`
+**📖 See [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md) for detailed local setup instructions.**
+
+**💡 Note:** You don't need Docker for local development! Just use a virtual environment (see above). Docker is only for deployment to certain cloud platforms.
 
 ### Option 2: Deploy as Public Web App 🌐
 

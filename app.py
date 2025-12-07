@@ -39,10 +39,10 @@ st.set_page_config(
     }
 )
 
-# Enhanced CSS for modern, professional styling
+# Enhanced CSS for modern, professional styling with animations and improved UX
 st.markdown("""
     <style>
-    /* Main Header */
+    /* Main Header with animation */
     .main-header {
         font-size: 3.5rem;
         font-weight: 700;
@@ -53,9 +53,42 @@ st.markdown("""
         text-align: center;
         margin-bottom: 1rem;
         padding: 1rem 0;
+        animation: fadeInDown 0.8s ease-out;
     }
     
-    /* Metric Cards */
+    @keyframes fadeInDown {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateX(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+    
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+    }
+    
+    /* Metric Cards with hover effects */
     .metric-card {
         background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
         padding: 1.5rem;
@@ -63,9 +96,15 @@ st.markdown("""
         margin: 0.5rem 0;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         border-left: 4px solid #667eea;
+        transition: all 0.3s ease;
     }
     
-    /* Buttons */
+    .metric-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+    }
+    
+    /* Enhanced Buttons with better animations */
     .stButton>button {
         width: 100%;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -74,52 +113,128 @@ st.markdown("""
         border: none;
         border-radius: 8px;
         padding: 0.75rem 1.5rem;
-        transition: all 0.3s ease;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         box-shadow: 0 4px 6px rgba(102, 126, 234, 0.3);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .stButton>button::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.3);
+        transform: translate(-50%, -50%);
+        transition: width 0.6s, height 0.6s;
+    }
+    
+    .stButton>button:hover::before {
+        width: 300px;
+        height: 300px;
     }
     
     .stButton>button:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 12px rgba(102, 126, 234, 0.4);
+        box-shadow: 0 8px 16px rgba(102, 126, 234, 0.5);
     }
     
-    /* Sidebar */
+    .stButton>button:active {
+        transform: translateY(0);
+    }
+    
+    /* Sidebar enhancements */
     .css-1d391kg {
         background-color: #f8f9fa;
     }
     
-    /* Dataframe styling */
+    /* Enhanced Dataframe styling */
     .dataframe {
         border-radius: 8px;
         overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        animation: fadeIn 0.5s ease-out;
     }
     
-    /* Tabs */
+    .dataframe thead {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .dataframe tbody tr {
+        transition: background-color 0.2s ease;
+    }
+    
+    .dataframe tbody tr:hover {
+        background-color: #f0f4ff;
+    }
+    
+    /* Enhanced Tabs with better styling */
     .stTabs [data-baseweb="tab-list"] {
         gap: 8px;
+        background-color: #f8f9fa;
+        padding: 0.5rem;
+        border-radius: 8px;
     }
     
     .stTabs [data-baseweb="tab"] {
-        border-radius: 8px 8px 0 0;
+        border-radius: 8px;
         padding: 10px 20px;
         font-weight: 600;
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
     }
     
-    /* Success/Info boxes */
+    .stTabs [data-baseweb="tab"]:hover {
+        background-color: rgba(102, 126, 234, 0.1);
+        border-color: rgba(102, 126, 234, 0.3);
+    }
+    
+    /* Enhanced Success/Info/Warning boxes */
     .stSuccess {
         border-left: 4px solid #10b981;
         border-radius: 8px;
+        padding: 1rem;
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.05) 100%);
+        animation: slideIn 0.4s ease-out;
     }
     
     .stInfo {
         border-left: 4px solid #3b82f6;
         border-radius: 8px;
+        padding: 1rem;
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.05) 100%);
+        animation: slideIn 0.4s ease-out;
     }
     
-    /* Expander styling */
+    .stWarning {
+        border-left: 4px solid #f59e0b;
+        border-radius: 8px;
+        padding: 1rem;
+        background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.05) 100%);
+        animation: slideIn 0.4s ease-out;
+    }
+    
+    .stError {
+        border-left: 4px solid #ef4444;
+        border-radius: 8px;
+        padding: 1rem;
+        background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.05) 100%);
+        animation: slideIn 0.4s ease-out;
+    }
+    
+    /* Enhanced Expander styling */
     .streamlit-expanderHeader {
         font-weight: 600;
         color: #667eea;
+        transition: color 0.3s ease;
+    }
+    
+    .streamlit-expanderHeader:hover {
+        color: #764ba2;
     }
     
     /* Hide Streamlit branding */
@@ -127,47 +242,136 @@ st.markdown("""
     footer {visibility: hidden;}
     header {visibility: hidden;}
     
-    /* Custom scrollbar */
+    /* Enhanced Custom scrollbar */
     ::-webkit-scrollbar {
-        width: 8px;
+        width: 10px;
+        height: 10px;
     }
     
     ::-webkit-scrollbar-track {
         background: #f1f1f1;
+        border-radius: 5px;
     }
     
     ::-webkit-scrollbar-thumb {
-        background: #667eea;
-        border-radius: 4px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 5px;
+        transition: background 0.3s ease;
     }
     
     ::-webkit-scrollbar-thumb:hover {
-        background: #764ba2;
+        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
     }
     
-    /* Score badges */
+    /* Enhanced Score badges with animations */
     .score-high {
         background: linear-gradient(135deg, #10b981 0%, #059669 100%);
         color: white;
-        padding: 4px 12px;
+        padding: 6px 14px;
         border-radius: 20px;
         font-weight: 600;
+        display: inline-block;
+        box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+        animation: fadeIn 0.5s ease-out;
     }
     
     .score-medium {
         background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
         color: white;
-        padding: 4px 12px;
+        padding: 6px 14px;
         border-radius: 20px;
         font-weight: 600;
+        display: inline-block;
+        box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);
+        animation: fadeIn 0.5s ease-out;
     }
     
     .score-low {
         background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
         color: white;
-        padding: 4px 12px;
+        padding: 6px 14px;
         border-radius: 20px;
         font-weight: 600;
+        display: inline-block;
+        box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+        animation: fadeIn 0.5s ease-out;
+    }
+    
+    /* Loading spinner enhancement */
+    .stSpinner > div {
+        border-top-color: #667eea !important;
+        border-right-color: #667eea !important;
+    }
+    
+    /* Metric value animations */
+    [data-testid="stMetricValue"] {
+        animation: fadeIn 0.6s ease-out;
+    }
+    
+    /* Selectbox and input enhancements */
+    .stSelectbox > div > div {
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+    
+    .stSelectbox > div > div:hover {
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+    }
+    
+    /* Slider enhancements */
+    .stSlider > div > div {
+        border-radius: 8px;
+    }
+    
+    /* Empty state styling */
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #666;
+    }
+    
+    .empty-state-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+    
+    /* Card hover effects */
+    .stock-card {
+        transition: all 0.3s ease;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 1rem 0;
+        background: white;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .stock-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+    }
+    
+    /* Progress bar enhancements */
+    .stProgress > div > div > div {
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        border-radius: 4px;
+    }
+    
+    /* Tooltip enhancements */
+    [data-testid="stTooltip"] {
+        font-size: 0.85rem;
+    }
+    
+    /* Responsive improvements */
+    @media (max-width: 768px) {
+        .main-header {
+            font-size: 2.5rem;
+        }
+    }
+    
+    /* Smooth transitions for all interactive elements */
+    * {
+        transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -251,8 +455,8 @@ def get_stock_data(custom_filters=None):
     data_fetcher = DataFetcher()
     stock_selector = StockSelector(data_fetcher)
     
-    with st.spinner("Analyzing stocks... This may take a minute."):
-        qualified_stocks = stock_selector.filter_stocks(config.STOCK_UNIVERSE, custom_filters=custom_filters)
+    # Fetch and analyze stocks
+    qualified_stocks = stock_selector.filter_stocks(config.STOCK_UNIVERSE, custom_filters=custom_filters)
     
     return qualified_stocks, data_fetcher
 
@@ -304,79 +508,174 @@ def create_price_chart(stock_data, symbol):
         row_heights=[0.5, 0.25, 0.25]
     )
     
-    # Price and moving averages
+    # Price and moving averages with enhanced colors
     fig.add_trace(
-        go.Scatter(x=data.index, y=data['Close'], name='Price', line=dict(color='#1f77b4')),
+        go.Scatter(
+            x=data.index, 
+            y=data['Close'], 
+            name='Price', 
+            line=dict(color='#667eea', width=2.5),
+            hovertemplate='<b>Price</b><br>$%{y:.2f}<extra></extra>'
+        ),
         row=1, col=1
     )
     
     if 'SMA_20' in data.columns:
         fig.add_trace(
-            go.Scatter(x=data.index, y=data['SMA_20'], name='SMA 20', line=dict(color='orange', dash='dash')),
+            go.Scatter(
+                x=data.index, 
+                y=data['SMA_20'], 
+                name='SMA 20', 
+                line=dict(color='#f59e0b', dash='dash', width=2),
+                hovertemplate='<b>SMA 20</b><br>$%{y:.2f}<extra></extra>'
+            ),
             row=1, col=1
         )
     
     if 'SMA_50' in data.columns:
         fig.add_trace(
-            go.Scatter(x=data.index, y=data['SMA_50'], name='SMA 50', line=dict(color='red', dash='dash')),
+            go.Scatter(
+                x=data.index, 
+                y=data['SMA_50'], 
+                name='SMA 50', 
+                line=dict(color='#ef4444', dash='dash', width=2),
+                hovertemplate='<b>SMA 50</b><br>$%{y:.2f}<extra></extra>'
+            ),
             row=1, col=1
         )
     
-    # RSI
+    # RSI with enhanced styling
     if 'RSI' in data.columns:
         fig.add_trace(
-            go.Scatter(x=data.index, y=data['RSI'], name='RSI', line=dict(color='purple')),
+            go.Scatter(
+                x=data.index, 
+                y=data['RSI'], 
+                name='RSI', 
+                line=dict(color='#764ba2', width=2),
+                fill='tozeroy',
+                fillcolor='rgba(118, 75, 162, 0.1)',
+                hovertemplate='<b>RSI</b><br>%{y:.1f}<extra></extra>'
+            ),
             row=2, col=1
         )
-        # Add RSI levels
-        fig.add_hline(y=70, line_dash="dash", line_color="red", row=2, col=1, annotation_text="Overbought (70)")
-        fig.add_hline(y=30, line_dash="dash", line_color="green", row=2, col=1, annotation_text="Oversold (30)")
+        # Add RSI levels with better styling
+        fig.add_hline(
+            y=70, 
+            line_dash="dash", 
+            line_color="#ef4444", 
+            line_width=2,
+            row=2, 
+            col=1, 
+            annotation_text="Overbought (70)",
+            annotation_position="right"
+        )
+        fig.add_hline(
+            y=30, 
+            line_dash="dash", 
+            line_color="#10b981", 
+            line_width=2,
+            row=2, 
+            col=1, 
+            annotation_text="Oversold (30)",
+            annotation_position="right"
+        )
+        # Add neutral zone
+        fig.add_hrect(
+            y0=30, y1=70, 
+            fillcolor="rgba(16, 185, 129, 0.05)", 
+            layer="below", 
+            line_width=0,
+            row=2, col=1
+        )
     
-    # MACD
+    # MACD with enhanced styling
     if 'MACD' in data.columns and 'MACD_Signal' in data.columns:
         fig.add_trace(
-            go.Scatter(x=data.index, y=data['MACD'], name='MACD', line=dict(color='blue')),
+            go.Scatter(
+                x=data.index, 
+                y=data['MACD'], 
+                name='MACD', 
+                line=dict(color='#3b82f6', width=2),
+                hovertemplate='<b>MACD</b><br>%{y:.3f}<extra></extra>'
+            ),
             row=3, col=1
         )
         fig.add_trace(
-            go.Scatter(x=data.index, y=data['MACD_Signal'], name='Signal', line=dict(color='red')),
+            go.Scatter(
+                x=data.index, 
+                y=data['MACD_Signal'], 
+                name='Signal', 
+                line=dict(color='#ef4444', width=2, dash='dash'),
+                hovertemplate='<b>Signal</b><br>%{y:.3f}<extra></extra>'
+            ),
             row=3, col=1
         )
-        # MACD Histogram
+        # MACD Histogram with better colors
         if 'MACD_Histogram' in data.columns:
-            colors = ['green' if x >= 0 else 'red' for x in data['MACD_Histogram']]
+            colors = ['#10b981' if x >= 0 else '#ef4444' for x in data['MACD_Histogram']]
             fig.add_trace(
-                go.Bar(x=data.index, y=data['MACD_Histogram'], name='Histogram', marker_color=colors),
+                go.Bar(
+                    x=data.index, 
+                    y=data['MACD_Histogram'], 
+                    name='Histogram', 
+                    marker_color=colors,
+                    hovertemplate='<b>Histogram</b><br>%{y:.3f}<extra></extra>'
+                ),
                 row=3, col=1
             )
     
-    # Enhanced chart styling
+    # Enhanced chart styling with modern design
     fig.update_layout(
         height=800,
         title={
-            'text': f"{symbol} - Technical Analysis",
+            'text': f"<b>{symbol}</b> - Technical Analysis",
             'x': 0.5,
             'xanchor': 'center',
-            'font': {'size': 20, 'color': '#667eea'}
+            'font': {'size': 22, 'color': '#667eea', 'family': 'Arial, sans-serif'}
         },
         showlegend=True,
         hovermode='x unified',
         template='plotly_white',
-        plot_bgcolor='rgba(0,0,0,0)',
-        paper_bgcolor='rgba(0,0,0,0)',
-        font=dict(family="Arial, sans-serif", size=12),
+        plot_bgcolor='rgba(248, 249, 250, 0.5)',
+        paper_bgcolor='rgba(255, 255, 255, 0.9)',
+        font=dict(family="Arial, sans-serif", size=12, color='#333'),
         legend=dict(
             orientation="h",
             yanchor="bottom",
             y=1.02,
             xanchor="right",
-            x=1
+            x=1,
+            bgcolor='rgba(255, 255, 255, 0.8)',
+            bordercolor='rgba(0, 0, 0, 0.1)',
+            borderwidth=1
+        ),
+        hoverlabel=dict(
+            bgcolor='rgba(255, 255, 255, 0.95)',
+            bordercolor='#667eea',
+            font_size=12,
+            font_family="Arial, sans-serif"
         )
     )
     
-    # Update axes styling
-    fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='rgba(0,0,0,0.1)')
-    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='rgba(0,0,0,0.1)')
+    # Update axes styling with better grid
+    fig.update_xaxes(
+        showgrid=True, 
+        gridwidth=1, 
+        gridcolor='rgba(0,0,0,0.08)',
+        zeroline=False,
+        showline=True,
+        linewidth=1,
+        linecolor='rgba(0,0,0,0.1)'
+    )
+    fig.update_yaxes(
+        showgrid=True, 
+        gridwidth=1, 
+        gridcolor='rgba(0,0,0,0.08)',
+        zeroline=False,
+        showline=True,
+        linewidth=1,
+        linecolor='rgba(0,0,0,0.1)'
+    )
     
     return fig
 
@@ -394,27 +693,53 @@ def main():
     )
     st.markdown("---")
     
-    # Sidebar for controls
+    # Sidebar for controls with enhanced organization
     with st.sidebar:
-        st.header("⚙️ Settings")
+        # Header with branding
+        st.markdown(f"""
+        <div style="text-align: center; padding: 1rem 0; border-bottom: 2px solid #667eea; margin-bottom: 1.5rem;">
+            <h2 style="margin: 0; color: #667eea; font-size: 1.5rem;">⚙️ Settings</h2>
+            <p style="margin: 0.5rem 0 0 0; color: #666; font-size: 0.85rem;">Configure your analysis</p>
+        </div>
+        """, unsafe_allow_html=True)
         
-        # Strategy Presets
-        st.subheader("📋 Strategy Presets")
+        # Strategy Presets with better organization
+        st.markdown("### 📋 Strategy Presets")
         strategy_presets = get_strategy_presets()
         selected_strategy = st.selectbox(
             "Select a strategy preset",
             options=list(strategy_presets.keys()),
             index=0,
-            help="Choose a pre-configured strategy or use 'Custom' to adjust filters manually"
+            help="Choose a pre-configured strategy. Each strategy has optimized filter settings for different investment styles.",
+            key="strategy_select"
         )
         
-        use_custom = st.checkbox("Use custom filters", value=False, help="Enable to manually adjust filter criteria")
+        # Show strategy description immediately
+        strategy_descriptions = {
+            "Default": "Balanced approach with standard filter settings suitable for most investors.",
+            "Conservative": "Focus on large-cap, low-volatility stocks. Lower risk, stable returns.",
+            "Aggressive": "Includes smaller companies and higher volatility. Higher risk, potential for higher returns.",
+            "Momentum": "Emphasizes stocks with strong price momentum and high volume. Trend-following strategy.",
+            "Value": "Targets established companies at reasonable prices. Value investing approach.",
+            "Dividend Focus": "Prioritizes large, stable companies suitable for income investing."
+        }
+        if selected_strategy in strategy_descriptions:
+            st.caption(f"💡 {strategy_descriptions[selected_strategy]}")
+        
+        st.markdown("---")
+        
+        use_custom = st.checkbox(
+            "🔧 Use custom filters", 
+            value=False, 
+            help="Enable to manually adjust filter criteria. This allows fine-tuning of all parameters."
+        )
         
         # Custom Filter Settings (shown when custom is enabled)
         if use_custom or selected_strategy == "Default":
-            st.subheader("🔧 Custom Filter Settings")
+            st.markdown("### 🔧 Custom Filter Settings")
+            st.caption("Adjust these parameters to fine-tune your stock selection criteria.")
             
-            with st.expander("Market Filters", expanded=False):
+            with st.expander("📊 Market Filters", expanded=False, icon="📊"):
                 min_market_cap = st.number_input(
                     "Min Market Cap (B)", 
                     min_value=1.0, 
@@ -433,7 +758,7 @@ def main():
                     help="Minimum daily trading volume"
                 )
             
-            with st.expander("Price Filters", expanded=False):
+            with st.expander("💰 Price Filters", expanded=False, icon="💰"):
                 min_price = st.number_input(
                     "Min Price ($)", 
                     min_value=1.0, 
@@ -449,7 +774,7 @@ def main():
                     step=10.0
                 )
             
-            with st.expander("Technical Filters", expanded=False):
+            with st.expander("📈 Technical Filters", expanded=False, icon="📈"):
                 min_rsi = st.slider(
                     "Min RSI", 
                     min_value=0, 
@@ -487,13 +812,25 @@ def main():
             if selected_strategy in strategy_descriptions:
                 st.info(f"**{selected_strategy} Strategy:**\n{strategy_descriptions[selected_strategy]}")
         
-        # Analysis options
-        st.subheader("📊 Analysis Options")
-        top_n = st.slider("Number of stocks to display", 10, 50, 20)
-        min_score = st.slider("Minimum score filter", 0, 100, 0)
+        st.markdown("---")
+        
+        # Analysis options with better labels
+        st.markdown("### 📊 Analysis Options")
+        top_n = st.slider(
+            "Number of stocks to display", 
+            10, 50, 20,
+            help="Maximum number of stocks to show in the results. Lower values show only top performers."
+        )
+        min_score = st.slider(
+            "Minimum score filter", 
+            0, 100, 0,
+            help="Only show stocks with scores above this threshold. Higher values filter for better opportunities."
+        )
+        
+        st.markdown("---")
         
         # Filter options
-        st.subheader("🔍 Display Filters")
+        st.markdown("### 🔍 Display Filters")
         sectors = st.multiselect(
             "Filter by Sector",
             options=["Technology", "Healthcare", "Financial Services", "Consumer Cyclical", 
@@ -501,7 +838,13 @@ def main():
             default=[]
         )
         
-        show_buy_signals_only = st.checkbox("Show BUY signals only", value=False)
+        show_buy_signals_only = st.checkbox(
+            "✅ Show BUY signals only", 
+            value=False,
+            help="Filter results to show only stocks with active BUY signals based on technical analysis."
+        )
+        
+        st.markdown("---")
         
         # Prepare custom filters
         if use_custom or selected_strategy == "Default":
@@ -519,17 +862,31 @@ def main():
         else:
             custom_filters = strategy_presets[selected_strategy]
         
-        # Refresh button
+        # Refresh button with better styling
         st.markdown("---")
-        refresh_data = st.button("🔄 Refresh Analysis", type="primary")
+        refresh_data = st.button(
+            "🔄 Refresh Analysis", 
+            type="primary",
+            use_container_width=True,
+            help="Clear cache and re-analyze all stocks with current filter settings. This may take a minute."
+        )
+        
+        # Cache status indicator
+        st.caption("💾 Data is cached for 1 hour to improve performance. Click refresh to get latest data.")
         
         if refresh_data:
             st.cache_data.clear()
             st.rerun()
     
-    # Initialize system
+    # Initialize system with enhanced loading state
     if 'qualified_stocks' not in st.session_state or refresh_data or 'custom_filters' not in st.session_state or st.session_state.get('custom_filters') != custom_filters:
-        qualified_stocks, data_fetcher = get_stock_data(custom_filters=custom_filters)
+        # Show loading state
+        with st.spinner("🔄 **Analyzing stocks...** This may take a minute. Fetching data and calculating technical indicators."):
+            qualified_stocks, data_fetcher = get_stock_data(custom_filters=custom_filters)
+        
+        # Show success message briefly
+        success_msg = st.success(f"✅ **Analysis complete!** Found {len(qualified_stocks)} qualified stocks.")
+        
         st.session_state.qualified_stocks = qualified_stocks
         st.session_state.data_fetcher = data_fetcher
         st.session_state.custom_filters = custom_filters
@@ -638,7 +995,21 @@ def main():
         st.markdown("Ranked by quantitative score (0-100). Higher scores indicate better opportunities.")
         
         if not filtered_stocks:
-            st.warning("No stocks match your current filters. Try adjusting your criteria.")
+            # Enhanced empty state
+            st.markdown("""
+            <div class="empty-state">
+                <div class="empty-state-icon">📊</div>
+                <h3>No stocks match your current filters</h3>
+                <p>Try adjusting your criteria to see more results:</p>
+                <ul style="text-align: left; display: inline-block;">
+                    <li>Lower the minimum score filter</li>
+                    <li>Select different sectors</li>
+                    <li>Try a different strategy preset</li>
+                    <li>Adjust custom filter settings</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
+            st.info("💡 **Tip:** Start with the 'Default' strategy and gradually adjust filters to find your preferred stocks.")
         else:
             # Create and display DataFrame
             df = create_stocks_dataframe(filtered_stocks)
@@ -755,14 +1126,29 @@ def main():
                     if chart:
                         st.plotly_chart(chart, use_container_width=True, key=f"chart_buy_{stock['symbol']}_{i}")
         else:
-            st.warning("⚠️ No BUY signals found in the current analysis. Try adjusting your filters or strategy.")
-            st.info("💡 **Tip:** Try using the 'Momentum' or 'Aggressive' strategy presets for more BUY signals.")
+            # Enhanced empty state for no BUY signals
+            st.markdown("""
+            <div class="empty-state">
+                <div class="empty-state-icon">🔍</div>
+                <h3>No BUY signals found</h3>
+                <p>The current market conditions or your filter settings don't match any stocks with strong BUY signals.</p>
+            </div>
+            """, unsafe_allow_html=True)
+            st.warning("⚠️ **No BUY signals found** in the current analysis. Try adjusting your filters or strategy.")
+            st.info("💡 **Tips to find more BUY signals:**\n- Try the 'Momentum' or 'Aggressive' strategy presets\n- Lower the minimum score filter\n- Adjust RSI range to allow more oversold conditions\n- Check different sectors")
     
     with tab3:
         st.markdown("### 🔍 Detailed Stock Analysis")
         st.markdown("Select a stock to view comprehensive technical analysis and indicators.")
         
         if not filtered_stocks:
+            st.markdown("""
+            <div class="empty-state">
+                <div class="empty-state-icon">📈</div>
+                <h3>No stocks available for analysis</h3>
+                <p>Please adjust your filters to see stock details.</p>
+            </div>
+            """, unsafe_allow_html=True)
             st.warning("No stocks available. Please adjust your filters.")
         else:
             # Stock selector with search
@@ -1009,6 +1395,13 @@ def main():
                     score_explanation = ai.explain_score(selected_ai_stock_data)
                     st.markdown(score_explanation)
         else:
+            st.markdown("""
+            <div class="empty-state">
+                <div class="empty-state-icon">🤖</div>
+                <h3>No stocks available for AI analysis</h3>
+                <p>Please adjust your filters to enable AI-powered insights.</p>
+            </div>
+            """, unsafe_allow_html=True)
             st.warning("No stocks available for AI analysis. Please adjust your filters.")
         
         st.markdown("---")
