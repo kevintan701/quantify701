@@ -1273,15 +1273,39 @@ def main():
                     # BUY signal reason in highlighted box
                     st.success(f"✅ **BUY Signal:** {stock['buy_reason']}")
                     
+                    # Suggested Buy Price
+                    st.markdown("#### 💰 Suggested Buy Price")
+                    ai = AIInsights()
+                    buy_price_info = ai.calculate_suggested_buy_price(
+                        stock, 
+                        strategy=selected_strategy,
+                        period=selected_period
+                    )
+                    
+                    price_col1, price_col2, price_col3 = st.columns(3)
+                    with price_col1:
+                        st.metric(
+                            "Suggested Price",
+                            f"${buy_price_info['suggested_price']:.2f}",
+                            delta=f"{buy_price_info['discount_pct']:.1f}% vs current" if buy_price_info['discount_pct'] > 0 else None
+                        )
+                    with price_col2:
+                        st.metric("Price Range Low", f"${buy_price_info['price_range_low']:.2f}")
+                    with price_col3:
+                        st.metric("Price Range High", f"${buy_price_info['price_range_high']:.2f}")
+                    
+                    st.caption(f"💡 **Reasoning**: {buy_price_info['reasoning']}")
+                    st.info(f"**Current Price**: ${buy_price_info['current_price']:.2f} | **Suggested Entry**: ${buy_price_info['suggested_price']:.2f}")
+                    
                     # AI Insight for each recommendation
                     st.markdown("#### 🤖 AI Insight")
-                    ai = AIInsights()
                     ai_insight = ai.generate_stock_insight(stock)
-                    st.info(ai_insight)
+                    st.markdown(ai_insight)
                     
                     # AI Recommendation
                     recommendation = ai.generate_recommendation(stock)
-                    st.markdown(f"**AI Recommendation**: {recommendation['summary']}")
+                    st.markdown("#### 🎯 AI Recommendation")
+                    st.markdown(recommendation['summary'])
                     
                     # Show chart
                     st.markdown("#### 📊 Price Chart & Technical Analysis")
@@ -1459,17 +1483,46 @@ def main():
                 else:
                     st.info(f"ℹ️ **Analysis:** {selected_stock['buy_reason']}")
                 
+                # Suggested Buy Price
+                st.markdown("---")
+                st.markdown("#### 💰 Suggested Buy Price & Range")
+                ai = AIInsights()
+                buy_price_info = ai.calculate_suggested_buy_price(
+                    selected_stock, 
+                    strategy=selected_strategy,
+                    period=selected_period
+                )
+                
+                price_col1, price_col2, price_col3, price_col4 = st.columns(4)
+                with price_col1:
+                    st.metric("Current Price", f"${buy_price_info['current_price']:.2f}")
+                with price_col2:
+                    st.metric(
+                        "Suggested Price",
+                        f"${buy_price_info['suggested_price']:.2f}",
+                        delta=f"{buy_price_info['discount_pct']:.1f}% discount" if buy_price_info['discount_pct'] > 0 else f"{abs(buy_price_info['discount_pct']):.1f}% premium"
+                    )
+                with price_col3:
+                    st.metric("Range Low", f"${buy_price_info['price_range_low']:.2f}")
+                with price_col4:
+                    st.metric("Range High", f"${buy_price_info['price_range_high']:.2f}")
+                
+                st.info(f"💡 **Calculation Basis**: {buy_price_info['reasoning']}")
+                
+                if buy_price_info['support_levels']:
+                    st.caption("**Support Levels Considered**: " + ", ".join([f"{s[0]} (${s[1]:.2f})" for s in buy_price_info['support_levels'][:3]]))
+                
                 # AI Insight for selected stock
                 st.markdown("---")
                 st.markdown("#### 🤖 AI Insight")
-                ai = AIInsights()
                 ai_insight = ai.generate_stock_insight(selected_stock)
-                st.info(ai_insight)
+                st.markdown(ai_insight)
                 
                 # AI Recommendation
+                st.markdown("---")
                 st.markdown("#### 🎯 AI Recommendation")
                 recommendation = ai.generate_recommendation(selected_stock)
-                st.success(recommendation['summary'])
+                st.markdown(recommendation['summary'])
                 
                 # Score Explanation
                 st.markdown("#### 📊 Score Explanation")
@@ -1514,6 +1567,26 @@ def main():
                 selected_ai_stock_data = next((s for s in filtered_stocks if s['symbol'] == selected_ai_stock), None)
                 
                 if selected_ai_stock_data:
+                    # Suggested Buy Price
+                    st.markdown(f"##### 💰 Suggested Buy Price for {selected_ai_stock}")
+                    buy_price_info = ai.calculate_suggested_buy_price(
+                        selected_ai_stock_data, 
+                        strategy=selected_strategy,
+                        period=selected_period
+                    )
+                    
+                    ai_price_col1, ai_price_col2, ai_price_col3 = st.columns(3)
+                    with ai_price_col1:
+                        st.metric("Suggested Price", f"${buy_price_info['suggested_price']:.2f}")
+                    with ai_price_col2:
+                        st.metric("Range Low", f"${buy_price_info['price_range_low']:.2f}")
+                    with ai_price_col3:
+                        st.metric("Range High", f"${buy_price_info['price_range_high']:.2f}")
+                    
+                    st.caption(f"💡 **Basis**: {buy_price_info['reasoning']} | Current: ${buy_price_info['current_price']:.2f}")
+                    
+                    st.markdown("---")
+                    
                     # AI Insight
                     st.markdown(f"##### 📈 AI Insight for {selected_ai_stock}")
                     insight = ai.generate_stock_insight(selected_ai_stock_data)
@@ -1525,35 +1598,8 @@ def main():
                     st.markdown("##### 🎯 AI Recommendation")
                     recommendation = ai.generate_recommendation(selected_ai_stock_data)
                     
-                    rec_col1, rec_col2, rec_col3 = st.columns(3)
-                    with rec_col1:
-                        if recommendation['action'] == 'BUY':
-                            st.success(f"**Action: {recommendation['action']}**")
-                        else:
-                            st.info(f"**Action: {recommendation['action']}**")
-                    
-                    with rec_col2:
-                        if recommendation['confidence'] == 'High':
-                            st.success(f"**Confidence: {recommendation['confidence']}**")
-                        elif recommendation['confidence'] == 'Medium':
-                            st.warning(f"**Confidence: {recommendation['confidence']}**")
-                        else:
-                            st.info(f"**Confidence: {recommendation['confidence']}**")
-                    
-                    with rec_col3:
-                        if recommendation['risk_level'] == 'Low':
-                            st.success(f"**Risk: {recommendation['risk_level']}**")
-                        elif recommendation['risk_level'] == 'Medium':
-                            st.warning(f"**Risk: {recommendation['risk_level']}**")
-                        else:
-                            st.error(f"**Risk: {recommendation['risk_level']}**")
-                    
-                    st.markdown(f"**Time Horizon**: {recommendation['time_horizon']}")
-                    
-                    if recommendation['reasoning']:
-                        st.markdown("**Key Reasoning:**")
-                        for reason in recommendation['reasoning']:
-                            st.markdown(f"- {reason}")
+                    # Display enhanced recommendation
+                    st.markdown(recommendation['summary'])
                     
                     st.markdown("---")
                     

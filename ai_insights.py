@@ -4,8 +4,9 @@ Provides AI-powered analysis, insights, and recommendations.
 Designed to be flexible for future expansion beyond stock selection.
 """
 
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 import pandas as pd
+import numpy as np
 from datetime import datetime
 
 
@@ -19,15 +20,139 @@ class AIInsights:
         """Initialize the AI insights generator."""
         pass
     
+    def calculate_suggested_buy_price(
+        self, 
+        stock: Dict, 
+        strategy: str = "Default",
+        period: str = "1y"
+    ) -> Dict:
+        """
+        Calculate suggested buy price or price range based on technical analysis and strategy.
+        
+        Args:
+            stock: Stock data dictionary
+            strategy: Selected strategy (Default, Conservative, Aggressive, etc.)
+            period: Time period for analysis
+            
+        Returns:
+            Dictionary with suggested buy price, price range, and reasoning
+        """
+        current_price = stock['current_price']
+        data = stock.get('data')
+        
+        if data is None or data.empty:
+            return {
+                'suggested_price': current_price,
+                'price_range_low': current_price * 0.95,
+                'price_range_high': current_price * 1.05,
+                'reasoning': 'Insufficient data for price calculation'
+            }
+        
+        latest = data.iloc[-1]
+        
+        # Calculate support levels
+        support_levels = []
+        
+        # 1. Moving averages as support
+        sma_20 = latest.get('SMA_20')
+        sma_50 = latest.get('SMA_50')
+        if pd.notna(sma_20):
+            support_levels.append(('SMA 20', sma_20))
+        if pd.notna(sma_50):
+            support_levels.append(('SMA 50', sma_50))
+        
+        # 2. Bollinger Lower Band as support
+        bb_lower = latest.get('BB_Lower')
+        if pd.notna(bb_lower):
+            support_levels.append(('Bollinger Lower', bb_lower))
+        
+        # 3. Recent low (last 20 days)
+        recent_low = data['Low'].tail(20).min()
+        if pd.notna(recent_low):
+            support_levels.append(('Recent Low', recent_low))
+        
+        # 4. RSI-based adjustment
+        rsi = stock.get('rsi')
+        rsi_adjustment = 0
+        if rsi is not None:
+            if rsi < 30:  # Oversold - suggest buying below current
+                rsi_adjustment = -0.03  # 3% below
+            elif rsi < 40:
+                rsi_adjustment = -0.015  # 1.5% below
+            elif rsi > 70:  # Overbought - wait for pullback
+                rsi_adjustment = -0.05  # 5% below
+        
+        # Strategy-based adjustments
+        strategy_multipliers = {
+            'Conservative': 0.98,  # More conservative, buy slightly below
+            'Default': 1.0,
+            'Aggressive': 1.02,  # More aggressive, can buy at or slightly above
+            'Momentum': 1.01,  # Momentum strategy, slight premium OK
+            'Value': 0.97,  # Value strategy, wait for discount
+            'Dividend Focus': 0.99  # Slight discount preferred
+        }
+        strategy_mult = strategy_multipliers.get(strategy, 1.0)
+        
+        # Calculate suggested price
+        if support_levels:
+            # Use the highest support level (closest to current price but below)
+            valid_supports = [s[1] for s in support_levels if s[1] < current_price]
+            if valid_supports:
+                base_support = max(valid_supports)
+                suggested_price = base_support * strategy_mult * (1 + rsi_adjustment)
+            else:
+                # All supports above current, use current with adjustment
+                suggested_price = current_price * strategy_mult * (1 + rsi_adjustment)
+        else:
+            # No support levels, use current price with adjustments
+            suggested_price = current_price * strategy_mult * (1 + rsi_adjustment)
+        
+        # Ensure suggested price is reasonable (within 10% of current)
+        suggested_price = max(
+            current_price * 0.90,
+            min(suggested_price, current_price * 1.10)
+        )
+        
+        # Calculate price range (±2-5% depending on volatility)
+        volatility = latest.get('Volatility', 0.02)
+        if pd.notna(volatility):
+            range_pct = min(max(volatility * 2, 0.02), 0.05)  # 2-5% range
+        else:
+            range_pct = 0.03  # Default 3%
+        
+        price_range_low = suggested_price * (1 - range_pct)
+        price_range_high = suggested_price * (1 + range_pct)
+        
+        # Build reasoning
+        reasoning_parts = []
+        if support_levels:
+            closest_support = min(support_levels, key=lambda x: abs(x[1] - suggested_price))
+            reasoning_parts.append(f"Based on {closest_support[0]} support level")
+        if rsi_adjustment < 0:
+            reasoning_parts.append(f"RSI suggests waiting for {abs(rsi_adjustment)*100:.1f}% pullback")
+        reasoning_parts.append(f"{strategy} strategy adjustment applied")
+        
+        reasoning = ". ".join(reasoning_parts) if reasoning_parts else "Based on technical analysis"
+        
+        return {
+            'suggested_price': round(suggested_price, 2),
+            'price_range_low': round(price_range_low, 2),
+            'price_range_high': round(price_range_high, 2),
+            'current_price': round(current_price, 2),
+            'discount_pct': round(((current_price - suggested_price) / current_price) * 100, 2),
+            'reasoning': reasoning,
+            'support_levels': support_levels
+        }
+    
     def generate_stock_insight(self, stock: Dict) -> str:
         """
-        Generate AI-powered insight for a single stock.
+        Generate AI-powered insight for a single stock with supportive, clear explanations.
         
         Args:
             stock: Stock data dictionary with all metrics
         
         Returns:
-            AI-generated insight text
+            AI-generated insight text with comprehensive analysis
         """
         symbol = stock['symbol']
         score = stock['score']
@@ -36,64 +161,118 @@ class AIInsights:
         volume_ratio = stock.get('volume_ratio', 0)
         sector = stock.get('sector', 'Unknown')
         current_price = stock['current_price']
+        market_cap = stock.get('market_cap', 0)
+        volatility = None
+        data = stock.get('data')
         
-        # Build insight based on multiple factors
+        if data is not None and not data.empty:
+            latest = data.iloc[-1]
+            volatility = latest.get('Volatility', None)
+        
+        # Build comprehensive insight with supportive tone
         insights = []
         
-        # Score-based insight
+        # Opening statement - supportive and clear
         if score >= 90:
-            insights.append(f"**Exceptional Opportunity**: {symbol} shows outstanding quantitative metrics with a score of {score:.1f}/100. This stock demonstrates strong technical indicators across multiple dimensions.")
+            insights.append(f"**🎯 Excellent Opportunity**: {symbol} demonstrates exceptional quantitative strength with a score of **{score:.1f}/100**. This indicates strong technical fundamentals across multiple indicators, making it a compelling candidate for consideration.")
         elif score >= 80:
-            insights.append(f"**Strong Candidate**: {symbol} presents a compelling investment opportunity with a score of {score:.1f}/100, indicating robust technical fundamentals.")
+            insights.append(f"**✅ Strong Candidate**: {symbol} presents a solid investment opportunity with a score of **{score:.1f}/100**. The technical analysis suggests robust fundamentals that align well with quantitative selection criteria.")
         elif score >= 70:
-            insights.append(f"**Solid Choice**: {symbol} shows promising characteristics with a score of {score:.1f}/100, worth monitoring for entry opportunities.")
+            insights.append(f"**📊 Solid Choice**: {symbol} shows promising characteristics with a score of **{score:.1f}/100**. While not exceptional, it demonstrates enough positive signals to warrant monitoring for potential entry points.")
         else:
-            insights.append(f"**Moderate Potential**: {symbol} has a score of {score:.1f}/100. While not exceptional, it may present value opportunities in specific market conditions.")
+            insights.append(f"**⚠️ Moderate Potential**: {symbol} has a score of **{score:.1f}/100**. This suggests the stock may require more careful evaluation or waiting for improved market conditions before considering an investment.")
         
-        # RSI analysis
+        # Technical Analysis Section
+        insights.append("\n**📈 Technical Analysis:**")
+        
+        # RSI analysis with clear explanations
         if rsi is not None:
             if rsi < 30:
-                insights.append(f"The RSI of {rsi:.1f} indicates the stock is significantly oversold, potentially presenting a buying opportunity for contrarian investors.")
+                insights.append(f"• **RSI ({rsi:.1f})**: The stock is significantly oversold, which historically presents buying opportunities. However, ensure this isn't due to fundamental issues. Consider this a potential entry point for contrarian investors.")
             elif rsi < 40:
-                insights.append(f"With an RSI of {rsi:.1f}, the stock is approaching oversold territory, suggesting potential upward momentum ahead.")
+                insights.append(f"• **RSI ({rsi:.1f})**: Approaching oversold territory, suggesting the stock may be undervalued relative to recent momentum. This could indicate a favorable entry opportunity.")
             elif 40 <= rsi <= 60:
-                insights.append(f"The RSI of {rsi:.1f} is in a neutral range, indicating balanced market sentiment without extreme overbought or oversold conditions.")
-            elif rsi > 70:
-                insights.append(f"An RSI of {rsi:.1f} suggests the stock may be overbought. Consider waiting for a pullback before entering.")
+                insights.append(f"• **RSI ({rsi:.1f})**: In a healthy neutral range, indicating balanced market sentiment. This suggests the stock isn't overextended in either direction, providing a stable foundation for investment.")
+            elif 60 < rsi <= 70:
+                insights.append(f"• **RSI ({rsi:.1f})**: Showing moderate bullish momentum. While positive, be cautious of potential overbought conditions. Consider waiting for a slight pullback for better entry prices.")
             else:
-                insights.append(f"The RSI of {rsi:.1f} shows moderate bullish momentum.")
+                insights.append(f"• **RSI ({rsi:.1f})**: The stock appears overbought, suggesting recent gains may be unsustainable short-term. **Recommendation**: Wait for a pullback to more reasonable levels before entering.")
         
-        # Momentum analysis
+        # Momentum analysis with context
         if momentum is not None:
             momentum_pct = momentum * 100
             if momentum_pct > 10:
-                insights.append(f"Strong positive momentum of {momentum_pct:.2f}% over the past 20 days indicates sustained buying pressure and potential continuation of the uptrend.")
+                insights.append(f"• **Momentum (+{momentum_pct:.2f}%)**: Strong positive momentum over the past 20 days indicates sustained buying interest. This suggests institutional confidence and potential trend continuation, though be mindful of potential exhaustion at these levels.")
             elif momentum_pct > 5:
-                insights.append(f"Positive momentum of {momentum_pct:.2f}% suggests the stock is gaining traction, which could signal the beginning of a favorable trend.")
+                insights.append(f"• **Momentum (+{momentum_pct:.2f}%)**: Healthy positive momentum suggests the stock is gaining traction. This could signal the early stages of a favorable trend, making it worth monitoring closely.")
             elif momentum_pct > 0:
-                insights.append(f"Modest positive momentum of {momentum_pct:.2f}% indicates slight upward pressure, though the trend may need confirmation.")
+                insights.append(f"• **Momentum (+{momentum_pct:.2f}%)**: Modest positive momentum indicates slight upward pressure. While encouraging, the trend may need additional confirmation through volume and price action before committing.")
             else:
-                insights.append(f"Negative momentum of {momentum_pct:.2f}% suggests caution. The stock may need to stabilize before considering entry.")
+                insights.append(f"• **Momentum ({momentum_pct:.2f}%)**: Negative momentum suggests the stock may need time to stabilize. **Recommendation**: Exercise patience and wait for clear reversal signals before considering entry.")
         
-        # Volume analysis
+        # Volume analysis with market context
         if volume_ratio:
             if volume_ratio >= 1.5:
-                insights.append(f"Exceptional trading volume ({volume_ratio:.2f}x average) indicates strong institutional interest and confirms the current price movement.")
+                insights.append(f"• **Volume ({volume_ratio:.2f}x average)**: Exceptional trading volume indicates strong institutional interest and validates recent price movements. This high volume provides confidence that the current trend is supported by real buying pressure.")
             elif volume_ratio >= 1.2:
-                insights.append(f"Above-average volume ({volume_ratio:.2f}x) suggests increased market attention and validates recent price action.")
-            elif volume_ratio < 0.8:
-                insights.append(f"Below-average volume ({volume_ratio:.2f}x) may indicate lack of conviction. Monitor for volume confirmation before committing.")
+                insights.append(f"• **Volume ({volume_ratio:.2f}x average)**: Above-average volume suggests increased market attention and confirms recent price action. This is a positive sign that the stock is attracting investor interest.")
+            elif volume_ratio >= 0.8:
+                insights.append(f"• **Volume ({volume_ratio:.2f}x average)**: Normal trading volume indicates steady market participation. While not exceptional, this level of activity provides adequate liquidity for most investors.")
+            else:
+                insights.append(f"• **Volume ({volume_ratio:.2f}x average)**: Below-average volume may indicate lack of strong conviction in recent price movements. **Recommendation**: Wait for volume confirmation to validate any potential entry signals.")
         
-        # Sector context
-        insights.append(f"Operating in the {sector} sector, {symbol} should be evaluated within the context of sector-specific trends and macroeconomic factors affecting this industry.")
+        # Market Context Section
+        insights.append("\n**🌐 Market Context:**")
         
-        # Price context
+        # Sector analysis
+        sector_insights = {
+            'Technology': 'Technology stocks are sensitive to innovation cycles and market sentiment. Consider broader tech sector trends and regulatory environment.',
+            'Healthcare': 'Healthcare stocks often provide defensive characteristics but can be volatile around regulatory news and clinical trial results.',
+            'Financial Services': 'Financial stocks are closely tied to interest rates and economic conditions. Monitor macroeconomic indicators.',
+            'Consumer Cyclical': 'Consumer stocks reflect economic health and consumer confidence. Consider economic cycles and spending trends.',
+            'Consumer Defensive': 'Defensive stocks typically provide stability during market uncertainty but may have slower growth.',
+            'Energy': 'Energy stocks are highly correlated with commodity prices and geopolitical factors. Monitor oil prices and supply dynamics.',
+            'Communication Services': 'Communication stocks benefit from digital transformation trends but face regulatory scrutiny.'
+        }
+        sector_advice = sector_insights.get(sector, f'The {sector} sector has unique characteristics that should be considered in your investment decision.')
+        insights.append(f"• **Sector ({sector})**: {sector_advice}")
+        
+        # Market cap context
+        if market_cap > 200_000_000_000:  # > $200B
+            insights.append(f"• **Market Cap (${market_cap/1e9:.1f}B)**: Large-cap stock providing stability and liquidity. Typically less volatile but may have slower growth potential.")
+        elif market_cap > 10_000_000_000:  # > $10B
+            insights.append(f"• **Market Cap (${market_cap/1e9:.1f}B)**: Mid to large-cap stock offering a balance between growth potential and stability.")
+        else:
+            insights.append(f"• **Market Cap (${market_cap/1e9:.1f}B)**: Smaller market cap may offer higher growth potential but with increased volatility and risk.")
+        
+        # Risk Assessment
+        insights.append("\n**⚠️ Risk Considerations:**")
+        if volatility:
+            vol_pct = volatility * 100
+            if vol_pct > 4:
+                insights.append(f"• **Volatility ({vol_pct:.2f}%)**: High volatility indicates significant price swings. This requires a higher risk tolerance and proper position sizing. Consider using stop-loss orders to manage risk.")
+            elif vol_pct > 2.5:
+                insights.append(f"• **Volatility ({vol_pct:.2f}%)**: Moderate volatility suggests reasonable price stability. This level is manageable for most investors with standard risk management practices.")
+            else:
+                insights.append(f"• **Volatility ({vol_pct:.2f}%)**: Low volatility indicates stable price action, suitable for conservative investors seeking lower-risk opportunities.")
+        else:
+            insights.append("• **Volatility**: Unable to assess volatility from available data. Consider this in your risk evaluation.")
+        
+        # Price accessibility
         if current_price < 50:
-            insights.append(f"At ${current_price:.2f}, this stock offers accessibility for smaller portfolios while maintaining liquidity.")
+            insights.append(f"• **Price (${current_price:.2f})**: Accessible price point suitable for smaller portfolios while maintaining good liquidity.")
         elif current_price > 200:
-            insights.append(f"With a price of ${current_price:.2f}, this stock represents a premium investment that may appeal to institutional investors.")
+            insights.append(f"• **Price (${current_price:.2f})**: Premium price point typically associated with established companies. May appeal to institutional investors but requires larger capital allocation.")
+        else:
+            insights.append(f"• **Price (${current_price:.2f})**: Moderate price point providing flexibility for various portfolio sizes.")
         
-        return " ".join(insights)
+        # Closing supportive statement
+        if score >= 80:
+            insights.append(f"\n**💡 Bottom Line**: {symbol} presents a strong quantitative case with multiple positive technical indicators. However, always complement this analysis with fundamental research, consider your risk tolerance, and ensure it aligns with your overall investment strategy.")
+        else:
+            insights.append(f"\n**💡 Bottom Line**: While {symbol} shows some positive signals, consider waiting for stronger confirmation or exploring other opportunities. Remember, quantitative analysis is one tool—combine it with fundamental analysis and your investment goals.")
+        
+        return "\n".join(insights)
     
     def generate_portfolio_insight(self, stocks: List[Dict]) -> str:
         """
@@ -151,28 +330,60 @@ class AIInsights:
     
     def generate_recommendation(self, stock: Dict) -> Dict:
         """
-        Generate AI-powered recommendation for a stock.
+        Generate AI-powered recommendation for a stock with clear, supportive reasoning.
         
         Args:
             stock: Stock data dictionary
         
         Returns:
-            Dictionary with recommendation details
+            Dictionary with recommendation details and comprehensive reasoning
         """
         symbol = stock['symbol']
         score = stock['score']
         buy_signal = stock.get('buy_signal', False)
+        rsi = stock.get('rsi')
+        momentum = stock.get('momentum')
+        volume_ratio = stock.get('volume_ratio', 0)
+        
+        # Determine confidence level
+        confidence_score = 0
+        if score >= 80:
+            confidence_score += 3
+        elif score >= 60:
+            confidence_score += 2
+        else:
+            confidence_score += 1
+        
+        if buy_signal:
+            confidence_score += 2
+        
+        if rsi and 30 <= rsi <= 50:
+            confidence_score += 1
+        
+        if momentum and momentum > 0.03:
+            confidence_score += 1
+        
+        if volume_ratio and volume_ratio >= 1.2:
+            confidence_score += 1
+        
+        if confidence_score >= 6:
+            confidence = 'High'
+        elif confidence_score >= 4:
+            confidence = 'Medium'
+        else:
+            confidence = 'Low'
         
         recommendation = {
             'symbol': symbol,
             'action': 'BUY' if buy_signal else 'HOLD',
-            'confidence': 'High' if score >= 80 else 'Medium' if score >= 60 else 'Low',
+            'confidence': confidence,
             'reasoning': [],
             'risk_level': 'Low',
-            'time_horizon': 'Short-term'
+            'time_horizon': 'Short-term',
+            'detailed_reasoning': []
         }
         
-        # Determine risk level
+        # Determine risk level with context
         volatility = None
         if stock.get('data') is not None and not stock['data'].empty:
             volatility = stock['data'].iloc[-1].get('Volatility', None)
@@ -180,33 +391,75 @@ class AIInsights:
         if volatility:
             if volatility > 0.04:
                 recommendation['risk_level'] = 'High'
+                recommendation['detailed_reasoning'].append(f"High volatility ({volatility*100:.2f}%) indicates significant price swings. This requires careful risk management and position sizing.")
             elif volatility > 0.025:
                 recommendation['risk_level'] = 'Medium'
+                recommendation['detailed_reasoning'].append(f"Moderate volatility ({volatility*100:.2f}%) suggests manageable risk with standard risk management practices.")
             else:
                 recommendation['risk_level'] = 'Low'
+                recommendation['detailed_reasoning'].append(f"Low volatility ({volatility*100:.2f}%) indicates stable price action, suitable for risk-averse investors.")
         
-        # Determine time horizon based on momentum and trends
-        momentum = stock.get('momentum')
+        # Determine time horizon with explanation
         if momentum and momentum > 0.05:
-            recommendation['time_horizon'] = 'Short to Medium-term'
+            recommendation['time_horizon'] = 'Short to Medium-term (1-6 months)'
+            recommendation['detailed_reasoning'].append("Strong momentum suggests potential for near-term gains, making this suitable for shorter holding periods.")
         elif momentum and momentum > 0:
-            recommendation['time_horizon'] = 'Medium-term'
+            recommendation['time_horizon'] = 'Medium-term (3-12 months)'
+            recommendation['detailed_reasoning'].append("Moderate momentum indicates steady growth potential over the medium term.")
         else:
-            recommendation['time_horizon'] = 'Long-term'
+            recommendation['time_horizon'] = 'Long-term (1+ years)'
+            recommendation['detailed_reasoning'].append("Lower momentum suggests this may be better suited for long-term value appreciation rather than quick gains.")
         
-        # Build reasoning
+        # Build comprehensive reasoning
         if buy_signal:
-            recommendation['reasoning'].append("Strong BUY signal detected based on technical analysis")
-        if score >= 80:
-            recommendation['reasoning'].append("Exceptional quantitative score indicates high-quality opportunity")
-        if stock.get('rsi') and 30 <= stock['rsi'] <= 50:
-            recommendation['reasoning'].append("RSI suggests favorable entry point")
-        if momentum and momentum > 0.03:
-            recommendation['reasoning'].append("Strong positive momentum supports bullish outlook")
+            recommendation['reasoning'].append("✅ Strong BUY signal from technical analysis")
+            recommendation['detailed_reasoning'].append("Multiple technical indicators align to suggest a favorable entry point. The combination of RSI, moving averages, MACD, and momentum creates a compelling technical case.")
+        else:
+            recommendation['reasoning'].append("⏸️ HOLD - Waiting for stronger signals")
+            recommendation['detailed_reasoning'].append("While the stock shows some positive characteristics, the technical indicators haven't aligned strongly enough to generate a clear BUY signal. Consider monitoring for improved entry conditions.")
         
-        recommendation['summary'] = f"AI Recommendation: {recommendation['action']} {symbol} with {recommendation['confidence'].lower()} confidence. "
-        recommendation['summary'] += f"Risk level: {recommendation['risk_level']}. "
-        recommendation['summary'] += f"Time horizon: {recommendation['time_horizon']}."
+        if score >= 80:
+            recommendation['reasoning'].append(f"⭐ Exceptional quantitative score ({score:.1f}/100)")
+            recommendation['detailed_reasoning'].append(f"The high score of {score:.1f}/100 indicates strong performance across multiple quantitative factors including momentum, RSI, moving averages, MACD, and volume. This suggests a high-quality opportunity.")
+        elif score >= 60:
+            recommendation['reasoning'].append(f"📊 Solid quantitative score ({score:.1f}/100)")
+            recommendation['detailed_reasoning'].append(f"The score of {score:.1f}/100 shows decent technical fundamentals, though not exceptional. This suggests moderate opportunity with room for improvement.")
+        else:
+            recommendation['reasoning'].append(f"⚠️ Lower quantitative score ({score:.1f}/100)")
+            recommendation['detailed_reasoning'].append(f"The score of {score:.1f}/100 indicates weaker technical signals. Consider waiting for improved conditions or exploring other opportunities.")
+        
+        if rsi and 30 <= rsi <= 50:
+            recommendation['reasoning'].append(f"📈 RSI ({rsi:.1f}) suggests favorable entry")
+            recommendation['detailed_reasoning'].append(f"RSI of {rsi:.1f} is in the optimal range for entry, indicating the stock is not overbought and may have room for upward movement.")
+        elif rsi and rsi > 70:
+            recommendation['reasoning'].append(f"⚠️ RSI ({rsi:.1f}) indicates overbought conditions")
+            recommendation['detailed_reasoning'].append(f"RSI of {rsi:.1f} suggests the stock may be overextended. Consider waiting for a pullback to more reasonable levels.")
+        
+        if momentum and momentum > 0.03:
+            recommendation['reasoning'].append(f"🚀 Strong momentum ({momentum*100:.2f}%)")
+            recommendation['detailed_reasoning'].append(f"Positive momentum of {momentum*100:.2f}% indicates sustained buying interest and potential trend continuation.")
+        elif momentum and momentum <= 0:
+            recommendation['reasoning'].append(f"📉 Negative momentum ({momentum*100:.2f}%)")
+            recommendation['detailed_reasoning'].append(f"Negative momentum suggests the stock may need time to stabilize. Exercise patience and wait for reversal signals.")
+        
+        if volume_ratio and volume_ratio >= 1.2:
+            recommendation['reasoning'].append(f"📊 High volume ({volume_ratio:.2f}x) confirms interest")
+            recommendation['detailed_reasoning'].append(f"Above-average volume ({volume_ratio:.2f}x) validates recent price movements and indicates strong market participation.")
+        
+        # Build summary with supportive tone
+        action_emoji = "✅" if buy_signal else "⏸️"
+        confidence_emoji = "🟢" if confidence == 'High' else "🟡" if confidence == 'Medium' else "🔴"
+        
+        recommendation['summary'] = f"{action_emoji} **{recommendation['action']}** {symbol} with {confidence_emoji} **{confidence} confidence**"
+        recommendation['summary'] += f"\n\n**Risk Level**: {recommendation['risk_level']}"
+        recommendation['summary'] += f"\n**Time Horizon**: {recommendation['time_horizon']}"
+        
+        if recommendation['detailed_reasoning']:
+            recommendation['summary'] += "\n\n**Why this recommendation?**\n"
+            for i, reason in enumerate(recommendation['detailed_reasoning'], 1):
+                recommendation['summary'] += f"{i}. {reason}\n"
+        
+        recommendation['summary'] += "\n**💡 Remember**: This is quantitative analysis based on technical indicators. Always complement with fundamental research, consider your risk tolerance, and ensure alignment with your investment goals."
         
         return recommendation
     
