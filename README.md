@@ -297,12 +297,17 @@ Provides comprehensive analysis including:
 
 ### Time Range Flexibility
 - **Period Options**: 1 Month, 3 Months, 6 Months, 1 Year, 2 Years, 5 Years, 10 Years, Year to Date, Maximum Available
-- **Interval Options**: Daily (most detailed), Weekly, Monthly, Quarterly (smoothed)
+- **Interval Options**: 
+  - **Intraday**: 1 Minute, 2 Minutes, 5 Minutes, 15 Minutes, 30 Minutes, 60 Minutes, 90 Minutes, Hourly
+  - **Daily/Weekly**: Daily, Weekly, Monthly, Quarterly
+- **Adaptive Data Point Requirements**: The system automatically adjusts minimum data point requirements based on the selected period and interval, ensuring stocks aren't filtered out unnecessarily
 - **Use Cases**: 
-  - Short-term: 1-3 months with daily intervals
-  - Medium-term: 6 months-1 year with daily/weekly
-  - Long-term: 2-10 years with weekly/monthly
-  - Trend analysis: Longer periods with weekly/monthly intervals
+  - **Intraday Trading**: 1-3 months with hourly/15-minute intervals (note: intraday data typically available up to 60 days)
+  - **Short-term**: 1-3 months with daily intervals
+  - **Medium-term**: 6 months-1 year with daily/weekly
+  - **Long-term**: 2-10 years with weekly/monthly
+  - **Trend analysis**: Longer periods with weekly/monthly intervals
+- **Important Note**: Intraday intervals (1m-1h) are typically only available for periods up to 60 days. For longer periods, use Daily or Weekly intervals.
 
 ### Chart Visualization
 - **Candlestick Charts**: Professional OHLC visualization showing open, high, low, close

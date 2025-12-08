@@ -485,6 +485,85 @@ def get_strategy_presets():
     }
 
 
+def calculate_adaptive_min_data_points(period: str, interval: str) -> int:
+    """
+    Calculate adaptive minimum data points based on period and interval.
+    This ensures we don't filter out stocks unnecessarily when using shorter periods.
+    
+    Args:
+        period: Time period ("1d", "5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "10y", "ytd", "max")
+        interval: Data interval ("1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h", "1d", "5d", "1wk", "1mo", "3mo")
+    
+    Returns:
+        Adaptive minimum data points required
+    """
+    # Estimate expected data points based on period and interval
+    # Trading days per year: ~252
+    # Trading hours per day: ~6.5 (9:30 AM - 4:00 PM EST)
+    
+    period_days_map = {
+        "1d": 1,
+        "5d": 5,
+        "1mo": 21,  # ~21 trading days per month
+        "3mo": 63,  # ~63 trading days per quarter
+        "6mo": 126,  # ~126 trading days per 6 months
+        "1y": 252,  # ~252 trading days per year
+        "2y": 504,
+        "5y": 1260,
+        "10y": 2520,
+        "ytd": 252,  # Approximate, varies by date
+        "max": 10000  # Very large number for max
+    }
+    
+    # Get approximate trading days for the period
+    trading_days = period_days_map.get(period, 252)
+    
+    # Calculate expected data points based on interval
+    if interval in ["1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h"]:
+        # Intraday intervals: ~6.5 trading hours per day
+        hours_per_day = 6.5
+        if interval == "1m":
+            points_per_day = hours_per_day * 60
+        elif interval == "2m":
+            points_per_day = hours_per_day * 30
+        elif interval == "5m":
+            points_per_day = hours_per_day * 12
+        elif interval == "15m":
+            points_per_day = hours_per_day * 4
+        elif interval == "30m":
+            points_per_day = hours_per_day * 2
+        elif interval == "60m" or interval == "90m":
+            points_per_day = hours_per_day
+        elif interval == "1h":
+            points_per_day = hours_per_day
+        
+        expected_points = int(trading_days * points_per_day)
+    elif interval == "1d":
+        expected_points = trading_days
+    elif interval == "5d":
+        expected_points = trading_days // 5
+    elif interval == "1wk":
+        expected_points = trading_days // 5  # ~5 trading days per week
+    elif interval == "1mo":
+        expected_points = trading_days // 21  # ~21 trading days per month
+    elif interval == "3mo":
+        expected_points = trading_days // 63  # ~63 trading days per quarter
+    else:
+        expected_points = trading_days
+    
+    # Set minimum data points to 80% of expected, but with reasonable bounds
+    # Minimum: 20 points (for very short periods)
+    # Maximum: 200 points (original default for long periods)
+    adaptive_min = max(20, min(int(expected_points * 0.8), 200))
+    
+    # For intraday intervals, we need at least enough for technical indicators
+    # SMA 20 requires 20 points, so ensure minimum is at least 30
+    if interval in ["1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h"]:
+        adaptive_min = max(30, adaptive_min)
+    
+    return adaptive_min
+
+
 @st.cache_data(ttl=3600)  # Cache for 1 hour
 def get_stock_data(custom_filters=None, period="1y", interval="1d"):
     """
@@ -497,6 +576,17 @@ def get_stock_data(custom_filters=None, period="1y", interval="1d"):
     """
     data_fetcher = DataFetcher()
     stock_selector = StockSelector(data_fetcher)
+    
+    # Calculate adaptive minimum data points based on period and interval
+    adaptive_min_data_points = calculate_adaptive_min_data_points(period, interval)
+    
+    # Merge adaptive min_data_points into custom_filters
+    if custom_filters is None:
+        custom_filters = {}
+    
+    # Update min_data_points with adaptive value
+    custom_filters = custom_filters.copy()  # Don't modify the original
+    custom_filters['min_data_points'] = adaptive_min_data_points
     
     # Fetch and analyze stocks with specified time range
     qualified_stocks = stock_selector.filter_stocks(
@@ -838,7 +928,16 @@ def main():
         selected_period = period_options[selected_period_label]
         
         # Interval selector (data frequency)
+        # Note: Intraday intervals (1m-1h) are only available for periods up to 60 days
         interval_options = {
+            "1 Minute": "1m",
+            "2 Minutes": "2m",
+            "5 Minutes": "5m",
+            "15 Minutes": "15m",
+            "30 Minutes": "30m",
+            "60 Minutes": "60m",
+            "90 Minutes": "90m",
+            "Hourly": "1h",
             "Daily": "1d",
             "Weekly": "1wk",
             "Monthly": "1mo",
@@ -848,10 +947,17 @@ def main():
         selected_interval_label = st.selectbox(
             "Data Interval",
             options=list(interval_options.keys()),
-            index=0,  # Default to "Daily"
-            help="Select the data frequency. Daily provides most detail, while weekly/monthly smooths out short-term volatility."
+            index=8,  # Default to "Daily"
+            help="Select the data frequency. Intraday intervals (1m-1h) are only available for periods up to 60 days. Daily provides most detail for longer periods."
         )
         selected_interval = interval_options[selected_interval_label]
+        
+        # Validate period/interval combination
+        intraday_intervals = ["1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h"]
+        long_periods = ["6mo", "1y", "2y", "5y", "10y", "ytd", "max"]
+        
+        if selected_interval in intraday_intervals and selected_period in long_periods:
+            st.warning(f"⚠️ **Note:** {selected_interval_label} data is typically only available for periods up to 60 days. Consider using '1 Month' or '3 Months' period, or switch to Daily/Weekly intervals for longer periods.")
         
         st.caption(f"📊 Analyzing data: {selected_period_label} period with {selected_interval_label.lower()} intervals")
         
@@ -989,6 +1095,7 @@ def main():
         st.markdown("---")
         
         # Prepare custom filters
+        # Note: min_data_points will be calculated adaptively based on period and interval
         if use_custom or selected_strategy == "Default":
             custom_filters = {
                 'min_market_cap': min_market_cap * 1e9,
@@ -998,11 +1105,14 @@ def main():
                 'min_rsi': min_rsi,
                 'max_rsi': max_rsi,
                 'min_volume_ratio': min_volume_ratio,
-                'min_data_points': 200,
+                # min_data_points will be set adaptively in get_stock_data()
                 'max_volatility': max_volatility / 100
             }
         else:
-            custom_filters = strategy_presets[selected_strategy]
+            custom_filters = strategy_presets[selected_strategy].copy()
+            # Remove min_data_points from strategy preset so adaptive calculation applies
+            if 'min_data_points' in custom_filters:
+                del custom_filters['min_data_points']
         
         # Refresh button with better styling
         st.markdown("---")
@@ -1033,6 +1143,9 @@ def main():
     )
     
     if needs_refresh:
+        # Calculate adaptive min_data_points for display
+        adaptive_min_points = calculate_adaptive_min_data_points(selected_period, selected_interval)
+        
         # Show loading state
         with st.spinner(f"🔄 **Analyzing stocks...** Fetching {selected_period_label.lower()} data with {selected_interval_label.lower()} intervals. This may take a minute."):
             qualified_stocks, data_fetcher = get_stock_data(
@@ -1041,8 +1154,11 @@ def main():
                 interval=selected_interval
             )
         
-        # Show success message briefly
-        success_msg = st.success(f"✅ **Analysis complete!** Found {len(qualified_stocks)} qualified stocks using {selected_period_label.lower()} data.")
+        # Show success message with adaptive data points info
+        success_msg = st.success(
+            f"✅ **Analysis complete!** Found {len(qualified_stocks)} qualified stocks using {selected_period_label.lower()} data. "
+            f"(Minimum data points required: {adaptive_min_points})"
+        )
         
         st.session_state.qualified_stocks = qualified_stocks
         st.session_state.data_fetcher = data_fetcher
