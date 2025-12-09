@@ -1,11 +1,37 @@
-# Quantify 701 - AI-Powered Quantitative Investment Platform
+# 📈 Quantify 701 - AI-Powered Quantitative Investment Platform
 
-**Quantify 701** is an AI-powered quantitative investment platform by **The Studio 701 LLC** that uses free data sources to select and analyze stocks based on technical analysis, quantitative filters, and artificial intelligence.
+<div align="center">
 
-🌐 **Live App**: [https://quantify701.streamlit.app/](https://quantify701.streamlit.app/)  
-📦 **GitHub**: [https://github.com/kevintan701/quantify701](https://github.com/kevintan701/quantify701)
+**A comprehensive quantitative stock analysis platform that combines technical analysis, AI-powered insights, and interactive data visualization to help investors make informed decisions.**
 
-## Features
+[![Live App](https://img.shields.io/badge/Live%20App-Streamlit%20Cloud-blue?style=for-the-badge&logo=streamlit)](https://quantify701.streamlit.app/)
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-black?style=for-the-badge&logo=github)](https://github.com/kevintan701/quantify701)
+[![Python](https://img.shields.io/badge/Python-3.8+-green?style=for-the-badge&logo=python)](https://www.python.org/)
+[![License](https://img.shields.io/badge/License-Educational-yellow?style=for-the-badge)](LICENSE)
+
+🌐 **Live Demo**: [https://quantify701.streamlit.app/](https://quantify701.streamlit.app/)  
+📦 **Repository**: [https://github.com/kevintan701/quantify701](https://github.com/kevintan701/quantify701)
+
+</div>
+
+---
+
+## 🎯 Project Overview
+
+**Quantify 701** is a full-stack quantitative investment analysis platform that empowers investors with AI-driven stock selection, technical analysis, and actionable insights. Built with Python and Streamlit, the platform provides a modern, interactive web interface for analyzing stocks using quantitative filters, technical indicators, and intelligent recommendations.
+
+### Key Highlights
+
+- 🤖 **AI-Powered Analysis**: Intelligent stock recommendations with multi-factor confidence scoring
+- 📊 **Advanced Technical Analysis**: 8-factor composite scoring system with 10+ technical indicators
+- 💰 **Smart Entry Pricing**: AI-calculated suggested buy prices based on support levels and strategy
+- 🕯️ **Professional Visualizations**: Interactive candlestick charts with technical indicator overlays
+- ⚡ **Flexible Time Ranges**: Support for intraday (1m-1h) to long-term (10y) analysis periods
+- 🎨 **Modern UI/UX**: Responsive web interface with smooth animations and intuitive design
+- 🔄 **Adaptive Filtering**: Intelligent data point requirements that adjust based on time range
+- 📈 **Multiple Strategies**: Pre-configured investment strategies (Conservative, Aggressive, Momentum, Value, Dividend)
+
+## 🚀 Features
 
 ### Core Features
 - **🤖 AI-Powered Insights**: Comprehensive, supportive analysis with clear explanations beyond technical data
@@ -48,7 +74,34 @@
 - **Customizable Filters**: Adjustable criteria for personalized analysis
 - **Export Functionality**: Download results as CSV
 
-## Installation
+## 🛠️ Technologies Used
+
+### Backend & Data Processing
+- **Python 3.8+**: Core programming language
+- **yfinance**: Free stock market data from Yahoo Finance
+- **pandas**: Data manipulation and analysis
+- **numpy**: Numerical computations
+
+### Frontend & Visualization
+- **Streamlit**: Interactive web application framework
+- **Plotly**: Interactive charts and visualizations
+- **Custom CSS**: Modern, responsive UI design
+
+### Technical Analysis
+- **RSI (Relative Strength Index)**: Momentum oscillator
+- **MACD**: Moving Average Convergence Divergence
+- **Moving Averages**: SMA 20, 50, 200
+- **Bollinger Bands**: Volatility indicators
+- **Volume Analysis**: Volume ratios and confirmation
+- **Momentum Indicators**: Price momentum and trend strength
+
+### AI & Machine Learning
+- **Rule-based AI System**: Intelligent recommendation engine
+- **Multi-factor Scoring**: Composite 0-100 scoring algorithm
+- **Risk Assessment**: Automated risk level calculation
+- **Market Sentiment Analysis**: Overall market condition evaluation
+
+## 📋 Installation
 
 **🚀 Quick Start (No Docker Required!):**
 
@@ -75,7 +128,7 @@ pip install -r requirements.txt
 
 **💡 Docker is Optional:** The `Dockerfile` in this repo is only for deployment to cloud platforms. For local development, just use the virtual environment method above. See [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md) for details.
 
-## Configuration
+## ⚙️ Configuration
 
 Edit `config.py` to customize:
 - Stock universe (list of stocks to analyze)
@@ -83,7 +136,7 @@ Edit `config.py` to customize:
 - Trading parameters (position sizes, stop-loss, take-profit)
 - Risk management settings
 
-## Usage
+## 💻 Usage
 
 **Important**: Make sure your virtual environment is activated before running:
 ```bash
@@ -150,20 +203,25 @@ The system will:
 3. Generate buy signals for qualified stocks
 4. Display detailed analysis and recommendations
 
-## System Components
+## 🏗️ Architecture & System Components
 
-### `app.py` ⭐
-- **Interactive web UI**: Modern Streamlit interface with smooth animations
+The platform follows a modular architecture with clear separation of concerns:
+
+### Core Modules
+
+### `app.py` ⭐ **Main Application**
+- **Interactive web UI**: Modern Streamlit interface with smooth animations and responsive design
 - **Real-time charts**: Interactive Plotly charts with technical indicators
   - Candlestick charts (OHLC visualization)
   - Line charts (closing prices)
   - Technical indicators overlay (RSI, MACD, Moving Averages)
-- **Time range controls**: Customizable period and interval selectors
-- **Strategy presets**: Pre-configured investment strategies
-- **Custom filters**: Adjustable quantitative criteria
-- **Suggested buy prices**: Display AI-calculated entry prices
-- **Enhanced AI insights**: Comprehensive analysis integration
-- **Export functionality**: CSV download capability
+- **Time range controls**: Customizable period and interval selectors with adaptive data point calculation
+- **Strategy presets**: Pre-configured investment strategies (6 different strategies)
+- **Custom filters**: Adjustable quantitative criteria with real-time updates
+- **Suggested buy prices**: Display AI-calculated entry prices with support level analysis
+- **Enhanced AI insights**: Comprehensive analysis integration with market context
+- **Export functionality**: CSV download capability for further analysis
+- **Caching system**: Intelligent data caching to minimize API calls and improve performance
 
 ### `ai_insights.py` ⭐
 - **AI-powered stock analysis**: Comprehensive, supportive insights with clear explanations
@@ -178,34 +236,74 @@ The system will:
 - **Score explanations**: Detailed breakdown of quantitative scores
 - **Market context**: Sector analysis, market cap considerations, risk factors
 
-### `data_fetcher.py`
-- Fetches stock data from Yahoo Finance with customizable periods and intervals
-- Calculates technical indicators:
+### `data_fetcher.py` **Data Management**
+- **Data fetching**: Retrieves stock data from Yahoo Finance with customizable periods and intervals
+- **Technical indicators calculation**:
   - Moving Averages (SMA 20, 50, 200)
   - RSI (Relative Strength Index)
   - MACD (Moving Average Convergence Divergence)
-  - Bollinger Bands
-  - Volume indicators
-  - Momentum and volatility
-- Provides intelligent caching to minimize API calls
-- Supports multiple time ranges (1mo to 10y) and intervals (Daily, Weekly, Monthly, Quarterly)
+  - Bollinger Bands (Upper, Middle, Lower)
+  - Volume indicators (Volume Ratio, Volume SMA)
+  - Momentum and volatility metrics
+- **Intelligent caching**: Reduces API calls with configurable cache timeout (default: 1 hour)
+- **Multi-interval support**: Handles intraday (1m-1h) to long-term (10y) data ranges
+- **Error handling**: Robust error handling for network issues and data availability
 
-### `stock_selector.py`
-- Applies quantitative filters to stock universe
-- Ranks stocks based on composite scoring system
-- Filters by market cap, volume, price, and technical indicators
+### `stock_selector.py` **Stock Filtering & Ranking**
+- **Quantitative filtering**: Applies multiple criteria to filter stock universe
+- **Composite scoring system**: 8-factor algorithm (0-100) that evaluates:
+  1. Momentum (0-25 points)
+  2. RSI positioning (0-20 points)
+  3. Moving average trends (0-20 points)
+  4. MACD signals (0-15 points)
+  5. Volume confirmation (0-12 points)
+  6. Volatility assessment (0-8 points)
+  7. Momentum consistency (0-8 points)
+  8. Bollinger Bands position (0-7 points)
+- **Multi-criteria filtering**: Market cap, volume, price, RSI, volatility, volume ratio
+- **Adaptive data requirements**: Adjusts minimum data points based on period/interval
+- **Ranking system**: Sorts stocks by composite score for easy identification of top opportunities
 
-### `trading_strategy.py`
-- Generates buy/sell signals based on technical analysis
-- Calculates optimal position sizes
-- Implements risk management rules
+### `trading_strategy.py` **Signal Generation**
+- **Buy/sell signals**: Generates trading signals based on technical analysis
+- **Position sizing**: Calculates optimal position sizes based on risk parameters
+- **Risk management**: Implements stop-loss, take-profit, and portfolio risk rules
+- **Signal confidence**: Provides confidence levels for each trading signal
 
-### `main.py`
-- Command-line interface for stock selection
-- Runs analysis cycles
-- Displays results in terminal
+### `ai_insights.py` ⭐ **AI Analysis Engine**
+- **Stock insights**: Comprehensive analysis with market context and sector trends
+- **Recommendations**: Multi-factor confidence scoring with detailed reasoning
+- **Buy price calculation**: AI-calculated entry prices using support levels and strategy
+- **Market sentiment**: Overall market condition assessment
+- **Risk assessment**: Automated risk level calculation with explanations
+- **Score explanations**: Detailed breakdown of quantitative scores
 
-## Example Output
+### `main.py` **CLI Interface**
+- **Command-line interface**: Terminal-based stock selection and analysis
+- **Batch processing**: Runs analysis cycles for multiple stocks
+- **Formatted output**: Displays results in readable terminal format
+- **Useful for**: Automated scripts, cron jobs, and server-side processing
+
+## 📊 Project Structure
+
+```
+quantify701/
+├── app.py                 # Main Streamlit web application
+├── ai_insights.py         # AI-powered analysis and recommendations
+├── data_fetcher.py        # Data fetching and technical indicators
+├── stock_selector.py      # Stock filtering and scoring system
+├── trading_strategy.py    # Trading signal generation
+├── portfolio.py          # Portfolio management (optional)
+├── main.py               # CLI interface
+├── config.py             # Configuration parameters
+├── requirements.txt       # Python dependencies
+├── README.md             # Project documentation
+├── DEPLOYMENT.md         # Deployment instructions
+└── .streamlit/           # Streamlit configuration
+    └── config.toml
+```
+
+## 📸 Example Output
 
 ```
 ============================================================
@@ -241,7 +339,7 @@ Total Return: $0.00 (0.00%)
 Number of Positions: 1
 ```
 
-## Customization
+## 🎨 Customization
 
 ### Adding More Stocks
 Edit `config.py` and add symbols to `STOCK_UNIVERSE`:
@@ -269,15 +367,17 @@ TAKE_PROFIT_PCT = 0.15  # 15% take profit
 MAX_POSITION_SIZE = 0.10  # Max 10% per position
 ```
 
-## Notes
+## ⚠️ Important Notes & Disclaimers
 
-- This is a **paper trading** system - it does not execute real trades
-- Always test strategies thoroughly before using real money
-- Market conditions change - regularly review and adjust parameters
-- Free data sources may have rate limits or delays
-- Past performance does not guarantee future results
+- **Paper Trading System**: This platform does not execute real trades - it's for analysis and educational purposes only
+- **Not Financial Advice**: All recommendations and insights are generated by algorithms and should not be considered as financial advice
+- **Data Limitations**: Free data sources may have rate limits, delays, or occasional unavailability
+- **Market Conditions**: Market conditions change constantly - regularly review and adjust parameters
+- **Past Performance**: Past performance does not guarantee future results
+- **Risk Warning**: Always test strategies thoroughly before using real money. Investing involves risk of loss.
 
-## Key Features in Detail
+## 🔍 Key Features in Detail
+
 
 ### Suggested Buy Price Calculation
 The AI calculates suggested entry prices based on:
@@ -315,18 +415,63 @@ Provides comprehensive analysis including:
 - **Technical Overlays**: Moving averages, RSI, MACD indicators
 - **Interactive Features**: Hover tooltips, zoom, pan capabilities
 
-## Future Enhancements
+## 🚀 Future Enhancements
 
-- Backtesting functionality
-- More sophisticated strategies (mean reversion, momentum, etc.)
-- Portfolio optimization
-- Real-time alerts
-- Integration with broker APIs for live trading
-- News sentiment analysis
-- Predictive price forecasting
-- Natural language queries about stocks
+### Planned Features
+- **Backtesting Engine**: Historical strategy performance testing
+- **Advanced Strategies**: Mean reversion, pairs trading, statistical arbitrage
+- **Portfolio Optimization**: Modern portfolio theory and risk-return optimization
+- **Real-time Alerts**: Email/SMS notifications for trading signals
+- **Broker Integration**: API connections for live trading (Alpaca, Interactive Brokers, etc.)
+- **News Sentiment Analysis**: NLP-based sentiment scoring from financial news
+- **Predictive Models**: Machine learning price forecasting
+- **Natural Language Queries**: Chat interface for stock queries
+- **Multi-asset Support**: Extend to ETFs, options, cryptocurrencies
+- **Social Features**: Share strategies and insights with community
 
-## License
+### Technical Improvements
+- **Database Integration**: Persistent storage for historical analysis
+- **API Development**: RESTful API for programmatic access
+- **Performance Optimization**: Parallel processing for faster analysis
+- **Enhanced Caching**: Redis-based distributed caching
+- **Monitoring & Logging**: Comprehensive logging and performance monitoring
 
-This project is for educational purposes. Use at your own risk.
+## 📚 Learning Outcomes
+
+This project demonstrates:
+
+- **Full-Stack Development**: End-to-end application development from data processing to UI
+- **Financial Engineering**: Implementation of quantitative trading strategies and technical analysis
+- **Data Science**: Data fetching, processing, and visualization
+- **AI/ML Concepts**: Rule-based AI systems and multi-factor scoring
+- **Web Development**: Modern web UI with Streamlit and interactive visualizations
+- **Software Architecture**: Modular design with separation of concerns
+- **API Integration**: Working with external APIs (Yahoo Finance)
+- **Performance Optimization**: Caching strategies and efficient data processing
+
+## 🤝 Contributing
+
+This is a portfolio project, but suggestions and feedback are welcome! If you'd like to contribute:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is for **educational purposes only**. Use at your own risk.
+
+**Disclaimer**: This software is provided "as is" without warranty of any kind. The authors and contributors are not responsible for any financial losses or damages resulting from the use of this software.
+
+---
+
+<div align="center">
+
+**Built with ❤️ by [The Studio 701 LLC](https://github.com/kevintan701)**
+
+[⬆ Back to Top](#-quantify-701---ai-powered-quantitative-investment-platform)
+
+</div>
 
