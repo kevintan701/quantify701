@@ -1261,10 +1261,11 @@ def main():
     st.markdown("---")
     
     # Main content area
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "📊 Stock Rankings", 
         "📈 Top Recommendations", 
         "🔍 Stock Details", 
+        "🔎 Stock Search",
         "🤖 AI Insights",
         "📚 How It Works"
     ])
@@ -1646,6 +1647,364 @@ def main():
                 st.markdown(score_explanation)
     
     with tab4:
+        st.markdown("### 🔎 Stock Search")
+        st.markdown("Search for any stock by symbol to get comprehensive analysis and insights.")
+        
+        # Search input
+        col_search1, col_search2 = st.columns([3, 1])
+        with col_search1:
+            search_symbol = st.text_input(
+                "Enter Stock Symbol",
+                placeholder="e.g., AAPL, MSFT, GOOGL, TSLA",
+                help="Enter a stock ticker symbol (e.g., AAPL for Apple Inc.)",
+                key="stock_search_input"
+            ).upper().strip()
+        
+        with col_search2:
+            search_button = st.button("🔍 Search", type="primary", use_container_width=True)
+        
+        # Use period and interval from sidebar settings
+        search_period = st.session_state.get('period', selected_period)
+        search_interval = st.session_state.get('interval', selected_interval)
+        
+        if search_button or (search_symbol and search_symbol != ""):
+            if not search_symbol:
+                st.warning("⚠️ Please enter a stock symbol to search.")
+            else:
+                with st.spinner(f"🔍 **Analyzing {search_symbol}...** Fetching data and calculating indicators..."):
+                    try:
+                        # Initialize data fetcher
+                        search_data_fetcher = DataFetcher()
+                        
+                        # Fetch stock data
+                        stock_data = search_data_fetcher.get_stock_data(
+                            search_symbol, 
+                            period=search_period, 
+                            interval=search_interval
+                        )
+                        
+                        if stock_data is None or stock_data.empty:
+                            st.error(f"❌ **Error**: Could not fetch data for {search_symbol}. Please check the symbol and try again.")
+                            st.info("💡 **Tip**: Make sure you're using the correct ticker symbol (e.g., AAPL for Apple, not APPL).")
+                        else:
+                            # Calculate technical indicators
+                            stock_data = search_data_fetcher.calculate_technical_indicators(stock_data)
+                            
+                            # Get stock info
+                            stock_info = search_data_fetcher.get_stock_info(search_symbol)
+                            
+                            if stock_info is None:
+                                st.warning(f"⚠️ **Warning**: Could not fetch detailed info for {search_symbol}, but price data is available.")
+                                stock_info = {
+                                    'symbol': search_symbol,
+                                    'market_cap': 0,
+                                    'sector': 'Unknown',
+                                    'industry': 'Unknown',
+                                    'current_price': float(stock_data['Close'].iloc[-1]),
+                                    'volume': int(stock_data['Volume'].iloc[-1]) if not stock_data['Volume'].empty else 0,
+                                    'avg_volume': 0,
+                                    'pe_ratio': None,
+                                    'dividend_yield': 0
+                                }
+                            
+                            # Create stock data structure for analysis
+                            latest = stock_data.iloc[-1]
+                            current_price = float(latest['Close'])
+                            
+                            searched_stock = {
+                                'symbol': search_symbol,
+                                'current_price': current_price,
+                                'rsi': float(latest['RSI']) if not pd.isna(latest['RSI']) else None,
+                                'momentum': float(latest['Momentum']) if not pd.isna(latest['Momentum']) else None,
+                                'volume_ratio': float(latest['Volume_Ratio']) if not pd.isna(latest['Volume_Ratio']) else None,
+                                'market_cap': stock_info.get('market_cap', 0),
+                                'sector': stock_info.get('sector', 'Unknown'),
+                                'industry': stock_info.get('industry', 'Unknown'),
+                                'data': stock_data,
+                                'info': stock_info
+                            }
+                            
+                            # Calculate score using stock selector
+                            stock_selector = StockSelector(search_data_fetcher)
+                            searched_stock['score'] = stock_selector._calculate_score(stock_data, stock_info)
+                            
+                            # Generate buy signal
+                            strategy = TradingStrategy()
+                            should_buy, reason = strategy.generate_buy_signal(searched_stock)
+                            searched_stock['buy_signal'] = should_buy
+                            searched_stock['buy_reason'] = reason
+                            
+                            # Display results
+                            st.success(f"✅ **Successfully analyzed {search_symbol}**")
+                            st.markdown("---")
+                            
+                            # Stock Overview
+                            st.markdown("#### 📊 Stock Overview")
+                            
+                            overview_col1, overview_col2, overview_col3, overview_col4 = st.columns(4)
+                            
+                            with overview_col1:
+                                st.markdown("**💰 Price & Score**")
+                                st.metric("Current Price", f"${searched_stock['current_price']:.2f}")
+                                
+                                # Score with color coding
+                                score = searched_stock['score']
+                                if score >= 80:
+                                    score_display = f"🟢 {score:.1f}"
+                                elif score >= 60:
+                                    score_display = f"🟡 {score:.1f}"
+                                else:
+                                    score_display = f"🔴 {score:.1f}"
+                                st.metric("Quantitative Score", score_display)
+                            
+                            with overview_col2:
+                                st.markdown("**📈 Technical Indicators**")
+                                rsi_display = f"{searched_stock['rsi']:.1f}" if searched_stock['rsi'] else "N/A"
+                                st.metric("RSI", rsi_display)
+                                
+                                momentum_display = f"{searched_stock['momentum']*100:+.2f}%" if searched_stock['momentum'] else "N/A"
+                                st.metric("Momentum", momentum_display)
+                            
+                            with overview_col3:
+                                st.markdown("**🏢 Company Info**")
+                                st.metric("Sector", searched_stock['sector'])
+                                st.metric("Industry", searched_stock['industry'])
+                            
+                            with overview_col4:
+                                st.markdown("**🎯 Signal**")
+                                signal_status = "✅ BUY" if searched_stock.get('buy_signal') else "⏸️ HOLD"
+                                if searched_stock.get('buy_signal'):
+                                    st.success(f"**{signal_status}**")
+                                else:
+                                    st.info(f"**{signal_status}**")
+                                
+                                # Market cap
+                                market_cap = searched_stock.get('market_cap', 0)
+                                if market_cap > 0:
+                                    if market_cap >= 1e12:
+                                        market_cap_display = f"${market_cap/1e12:.2f}T"
+                                    elif market_cap >= 1e9:
+                                        market_cap_display = f"${market_cap/1e9:.2f}B"
+                                    else:
+                                        market_cap_display = f"${market_cap/1e6:.2f}M"
+                                    st.metric("Market Cap", market_cap_display)
+                            
+                            st.markdown("---")
+                            
+                            # Price Chart
+                            st.markdown("#### 📈 Price Chart & Technical Analysis")
+                            current_chart_type = st.session_state.get('chart_type', 'candlestick')
+                            chart = create_price_chart(searched_stock, search_symbol, chart_type=current_chart_type)
+                            if chart:
+                                st.plotly_chart(chart, use_container_width=True, key=f"chart_search_{search_symbol}")
+                            
+                            st.markdown("---")
+                            
+                            # Detailed Technical Indicators
+                            st.markdown("#### 🔬 Detailed Technical Indicators")
+                            
+                            tech_detail_col1, tech_detail_col2, tech_detail_col3 = st.columns(3)
+                            
+                            with tech_detail_col1:
+                                st.markdown("**📈 Moving Averages**")
+                                sma20 = latest.get('SMA_20', None)
+                                sma50 = latest.get('SMA_50', None)
+                                sma200 = latest.get('SMA_200', None)
+                                
+                                if pd.notna(sma20):
+                                    price_vs_sma20 = ((current_price - sma20) / sma20) * 100
+                                    st.metric("SMA 20", f"${sma20:.2f}", f"{price_vs_sma20:+.1f}%")
+                                else:
+                                    st.metric("SMA 20", "N/A")
+                                
+                                if pd.notna(sma50):
+                                    price_vs_sma50 = ((current_price - sma50) / sma50) * 100
+                                    st.metric("SMA 50", f"${sma50:.2f}", f"{price_vs_sma50:+.1f}%")
+                                else:
+                                    st.metric("SMA 50", "N/A")
+                                
+                                if pd.notna(sma200):
+                                    price_vs_sma200 = ((current_price - sma200) / sma200) * 100
+                                    st.metric("SMA 200", f"${sma200:.2f}", f"{price_vs_sma200:+.1f}%")
+                                else:
+                                    st.metric("SMA 200", "N/A")
+                            
+                            with tech_detail_col2:
+                                st.markdown("**📊 MACD Analysis**")
+                                macd = latest.get('MACD', None)
+                                macd_signal = latest.get('MACD_Signal', None)
+                                macd_hist = latest.get('MACD_Histogram', None)
+                                
+                                if pd.notna(macd):
+                                    st.metric("MACD", f"{macd:.2f}")
+                                else:
+                                    st.metric("MACD", "N/A")
+                                
+                                if pd.notna(macd_signal):
+                                    st.metric("Signal Line", f"{macd_signal:.2f}")
+                                else:
+                                    st.metric("Signal Line", "N/A")
+                                
+                                if pd.notna(macd_hist):
+                                    hist_color = "🟢" if macd_hist > 0 else "🔴"
+                                    st.metric("Histogram", f"{hist_color} {macd_hist:.2f}")
+                                
+                                # MACD trend
+                                if pd.notna(macd) and pd.notna(macd_signal):
+                                    if macd > macd_signal:
+                                        st.success("🟢 Bullish Trend")
+                                    else:
+                                        st.error("🔴 Bearish Trend")
+                            
+                            with tech_detail_col3:
+                                st.markdown("**📉 Volatility & Bands**")
+                                volatility = latest.get('Volatility', None)
+                                if pd.notna(volatility):
+                                    st.metric("Daily Volatility", f"{volatility*100:.2f}%")
+                                else:
+                                    st.metric("Daily Volatility", "N/A")
+                                
+                                bb_upper = latest.get('BB_Upper', None)
+                                bb_lower = latest.get('BB_Lower', None)
+                                bb_middle = latest.get('BB_Middle', None)
+                                
+                                if pd.notna(bb_upper) and pd.notna(bb_lower) and pd.notna(bb_middle):
+                                    bb_position = (current_price - bb_lower) / (bb_upper - bb_lower)
+                                    st.metric("BB Position", f"{bb_position*100:.1f}%")
+                                    st.metric("BB Upper", f"${bb_upper:.2f}")
+                                    st.metric("BB Lower", f"${bb_lower:.2f}")
+                                    
+                                    if bb_position < 0.2:
+                                        st.info("📍 Near lower band (potentially oversold)")
+                                    elif bb_position > 0.8:
+                                        st.warning("📍 Near upper band (potentially overbought)")
+                                    else:
+                                        st.success("📍 Within normal range")
+                                else:
+                                    st.metric("Bollinger Bands", "N/A")
+                            
+                            st.markdown("---")
+                            
+                            # Buy Signal Details
+                            if searched_stock.get('buy_signal'):
+                                st.success(f"✅ **BUY Signal Detected**\n\n{searched_stock['buy_reason']}")
+                            else:
+                                st.info(f"ℹ️ **Analysis:** {searched_stock['buy_reason']}")
+                            
+                            st.markdown("---")
+                            
+                            # Suggested Buy Price
+                            st.markdown("#### 💰 Suggested Buy Price & Range")
+                            ai = AIInsights()
+                            buy_price_info = ai.calculate_suggested_buy_price(
+                                searched_stock, 
+                                strategy=selected_strategy,
+                                period=search_period
+                            )
+                            
+                            price_col1, price_col2, price_col3, price_col4 = st.columns(4)
+                            with price_col1:
+                                st.metric("Current Price", f"${buy_price_info['current_price']:.2f}")
+                            with price_col2:
+                                discount_text = f"{buy_price_info['discount_pct']:.1f}% discount" if buy_price_info['discount_pct'] > 0 else f"{abs(buy_price_info['discount_pct']):.1f}% premium"
+                                st.metric(
+                                    "Suggested Price",
+                                    f"${buy_price_info['suggested_price']:.2f}",
+                                    delta=discount_text
+                                )
+                            with price_col3:
+                                st.metric("Range Low", f"${buy_price_info['price_range_low']:.2f}")
+                            with price_col4:
+                                st.metric("Range High", f"${buy_price_info['price_range_high']:.2f}")
+                            
+                            st.info(f"💡 **Calculation Basis**: {buy_price_info['reasoning']}")
+                            
+                            if buy_price_info['support_levels']:
+                                st.caption("**Support Levels Considered**: " + ", ".join([f"{s[0]} (${s[1]:.2f})" for s in buy_price_info['support_levels'][:3]]))
+                            
+                            st.markdown("---")
+                            
+                            # AI Insight
+                            st.markdown("#### 🤖 AI Insight")
+                            ai_insight = ai.generate_stock_insight(searched_stock)
+                            st.markdown(ai_insight)
+                            
+                            st.markdown("---")
+                            
+                            # AI Recommendation
+                            st.markdown("#### 🎯 AI Recommendation")
+                            recommendation = ai.generate_recommendation(searched_stock, selected_strategy)
+                            
+                            rec_col1, rec_col2, rec_col3 = st.columns(3)
+                            with rec_col1:
+                                confidence_color = "🟢" if recommendation['confidence'] == 'High' else "🟡" if recommendation['confidence'] == 'Medium' else "🔴"
+                                st.metric("Confidence", f"{confidence_color} {recommendation['confidence']}")
+                            with rec_col2:
+                                risk_color = "🟢" if recommendation['risk_level'] == 'Low' else "🟡" if recommendation['risk_level'] == 'Medium' else "🔴"
+                                st.metric("Risk Level", f"{risk_color} {recommendation['risk_level']}")
+                            with rec_col3:
+                                st.metric("Time Horizon", recommendation['time_horizon'])
+                            
+                            st.markdown(recommendation['summary'])
+                            
+                            if recommendation.get('reasoning'):
+                                with st.expander("📋 Detailed Reasoning", expanded=False):
+                                    for reason in recommendation['reasoning']:
+                                        st.markdown(f"- {reason}")
+                            
+                            st.markdown("---")
+                            
+                            # Score Explanation
+                            st.markdown("#### 📊 Score Explanation")
+                            score_explanation = ai.explain_score(searched_stock)
+                            st.markdown(score_explanation)
+                            
+                            # Additional Company Info
+                            if stock_info and stock_info.get('pe_ratio'):
+                                st.markdown("---")
+                                st.markdown("#### 📋 Additional Company Information")
+                                
+                                info_col1, info_col2, info_col3 = st.columns(3)
+                                
+                                with info_col1:
+                                    if stock_info.get('pe_ratio'):
+                                        st.metric("P/E Ratio", f"{stock_info['pe_ratio']:.2f}")
+                                    if stock_info.get('dividend_yield'):
+                                        st.metric("Dividend Yield", f"{stock_info['dividend_yield']*100:.2f}%")
+                                
+                                with info_col2:
+                                    if stock_info.get('volume'):
+                                        st.metric("Current Volume", f"{stock_info['volume']:,}")
+                                    if stock_info.get('avg_volume'):
+                                        st.metric("Avg Volume", f"{stock_info['avg_volume']:,}")
+                                
+                                with info_col3:
+                                    if searched_stock.get('volume_ratio'):
+                                        st.metric("Volume Ratio", f"{searched_stock['volume_ratio']:.2f}x")
+                    
+                    except Exception as e:
+                        st.error(f"❌ **Error analyzing {search_symbol}**: {str(e)}")
+                        st.info("💡 **Tip**: Make sure the stock symbol is correct and the stock is actively traded.")
+        
+        else:
+            # Show placeholder/instructions
+            st.info("""
+            **🔍 How to use Stock Search:**
+            
+            1. Enter a stock ticker symbol in the search box above (e.g., AAPL, MSFT, GOOGL)
+            2. Click the "Search" button or press Enter
+            3. View comprehensive analysis including:
+               - Current price and quantitative score
+               - Technical indicators (RSI, MACD, Moving Averages, Bollinger Bands)
+               - Interactive price charts
+               - AI-powered insights and recommendations
+               - Suggested buy price and entry range
+               - Detailed score breakdown
+            
+            **💡 Tip**: You can search for any stock listed on major exchanges (NYSE, NASDAQ, etc.)
+            """)
+    
+    with tab5:
         st.markdown("### 🤖 AI Insights & Analysis")
         st.markdown("AI-powered insights, recommendations, and market sentiment analysis.")
         
@@ -1754,7 +2113,7 @@ def main():
             - Automated strategy suggestions
             """)
     
-    with tab5:
+    with tab6:
         st.header("📚 Stock Selection Process Explained")
         
         st.markdown("""
