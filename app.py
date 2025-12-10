@@ -1933,7 +1933,7 @@ def main():
                             
                             # AI Recommendation
                             st.markdown("#### 🎯 AI Recommendation")
-                            recommendation = ai.generate_recommendation(searched_stock, selected_strategy)
+                            recommendation = ai.generate_recommendation(searched_stock)
                             
                             rec_col1, rec_col2, rec_col3 = st.columns(3)
                             with rec_col1:
