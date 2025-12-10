@@ -34,6 +34,7 @@
 ## 🚀 Features
 
 ### Core Features
+- **🔎 Stock Search**: Search and analyze any stock by ticker symbol with comprehensive details
 - **🤖 AI-Powered Insights**: Comprehensive, supportive analysis with clear explanations beyond technical data
 - **💰 Suggested Buy Price**: AI-calculated entry prices based on support levels, strategy, and technical indicators
 - **📊 Time Range Filters**: Analyze stocks with customizable periods (1mo to 10y) and intervals (Daily, Weekly, Monthly, Quarterly)
@@ -63,6 +64,7 @@
 
 ### User Interface
 - **Interactive Web UI**: Modern, responsive interface with smooth animations
+- **Stock Search**: Search any stock by symbol for instant comprehensive analysis
 - **Real-time Charts**: Interactive Plotly charts with technical indicators
 - **Flexible Strategy Presets**: Multiple investment strategies:
   - Default (balanced approach)
@@ -164,6 +166,7 @@ streamlit run app.py
 The app will automatically open in your browser at **`http://localhost:8501`**
 
 **The web UI provides:**
+- 🔎 **Stock Search**: Search any stock by ticker symbol for instant comprehensive analysis
 - 📊 **Stock Rankings**: Interactive table with scores, signals, and key metrics
 - 📈 **Top Recommendations**: BUY signals with suggested entry prices and AI insights
 - 🔍 **Stock Details**: Comprehensive analysis with technical indicators and charts
@@ -211,6 +214,7 @@ The platform follows a modular architecture with clear separation of concerns:
 
 ### `app.py` ⭐ **Main Application**
 - **Interactive web UI**: Modern Streamlit interface with smooth animations and responsive design
+- **Stock Search**: Search and analyze any stock by ticker symbol with full technical analysis
 - **Real-time charts**: Interactive Plotly charts with technical indicators
   - Candlestick charts (OHLC visualization)
   - Line charts (closing prices)
