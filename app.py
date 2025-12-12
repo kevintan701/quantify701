@@ -11,6 +11,7 @@ from plotly.subplots import make_subplots
 from datetime import datetime
 import sys
 import os
+import time
 
 # Add current directory to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -172,25 +173,107 @@ st.markdown("""
         background-color: #f0f4ff;
     }
     
-    /* Enhanced Tabs with better styling */
+    /* Enhanced Tabs with better styling and scrollability */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-        background-color: #f8f9fa;
-        padding: 0.5rem;
-        border-radius: 8px;
+        gap: 6px;
+        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        padding: 0.75rem;
+        border-radius: 12px;
+        display: flex;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        scrollbar-color: #667eea #f8f9fa;
+        position: relative;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        border: 1px solid #e5e7eb;
+    }
+    
+    /* Add fade effect at edges to indicate scrollability */
+    .stTabs [data-baseweb="tab-list"]::before,
+    .stTabs [data-baseweb="tab-list"]::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 30px;
+        pointer-events: none;
+        z-index: 1;
+    }
+    
+    .stTabs [data-baseweb="tab-list"]::before {
+        left: 0;
+        background: linear-gradient(to right, rgba(248, 249, 250, 1), rgba(248, 249, 250, 0));
+    }
+    
+    .stTabs [data-baseweb="tab-list"]::after {
+        right: 0;
+        background: linear-gradient(to left, rgba(248, 249, 250, 1), rgba(248, 249, 250, 0));
+    }
+    
+    /* Custom scrollbar for tabs */
+    .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar {
+        height: 8px;
+    }
+    
+    .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 4px;
+        margin: 0 10px;
+    }
+    
+    .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar-thumb {
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        border-radius: 4px;
+        transition: background 0.3s ease;
+    }
+    
+    .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(90deg, #764ba2 0%, #667eea 100%);
     }
     
     .stTabs [data-baseweb="tab"] {
-        border-radius: 8px;
-        padding: 10px 20px;
+        border-radius: 10px;
+        padding: 12px 18px;
         font-weight: 600;
-        transition: all 0.3s ease;
+        font-size: 0.95rem;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         border: 2px solid transparent;
+        white-space: nowrap;
+        min-width: fit-content;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: white;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
     
     .stTabs [data-baseweb="tab"]:hover {
-        background-color: rgba(102, 126, 234, 0.1);
-        border-color: rgba(102, 126, 234, 0.3);
+        background-color: rgba(102, 126, 234, 0.08);
+        border-color: rgba(102, 126, 234, 0.2);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(102, 126, 234, 0.2);
+    }
+    
+    .stTabs [data-baseweb="tab"][aria-selected="true"] {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white !important;
+        border-color: #667eea;
+        box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+    }
+    
+    .stTabs [data-baseweb="tab"][aria-selected="true"]:hover {
+        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 6px 12px rgba(102, 126, 234, 0.4);
+    }
+    
+    /* Tab icon alignment */
+    .stTabs [data-baseweb="tab"] > div {
+        display: flex;
+        align-items: center;
+        gap: 6px;
     }
     
     /* Enhanced Success/Info/Warning boxes */
@@ -398,11 +481,159 @@ st.markdown("""
         font-size: 0.85rem;
     }
     
-    /* Responsive improvements */
+    /* Badge/Tag responsive styling - wraps on smaller screens */
+    .badge-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin: 0.5rem 0;
+    }
+    
+    .badge-item {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.6rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        white-space: nowrap;
+        margin: 0.2rem 0.2rem 0.2rem 0;
+        line-height: 1.4;
+    }
+    
+    /* Responsive improvements for mobile and tablets */
     @media (max-width: 768px) {
         .main-header {
-            font-size: 2.5rem;
+            font-size: 2rem;
+            padding: 0.5rem 0;
         }
+        
+        /* Make tabs scrollable on mobile - already handled in main CSS */
+        .stTabs [data-baseweb="tab"] {
+            padding: 10px 14px;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            min-width: fit-content;
+        }
+        
+        /* Quick filter buttons on mobile */
+        .stButton > button {
+            min-height: 60px;
+            font-size: 0.8rem;
+            padding: 0.6rem 0.4rem;
+        }
+        
+        /* Improve button sizes for touch */
+        .stButton>button {
+            padding: 0.9rem 1.2rem;
+            font-size: 0.95rem;
+            min-height: 44px; /* Minimum touch target size */
+        }
+        
+        /* Make quick filter buttons stack on mobile */
+        .quick-filter-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        /* Badge wrapping on mobile */
+        .badge-container {
+            gap: 0.4rem;
+        }
+        
+        .badge-item {
+            font-size: 0.7rem;
+            padding: 0.3rem 0.5rem;
+            margin: 0.15rem;
+        }
+        
+        /* Improve metric cards on mobile */
+        .metric-card {
+            padding: 1rem;
+            margin: 0.3rem 0;
+        }
+        
+        /* Better spacing for columns on mobile */
+        [data-testid="column"] {
+            padding: 0.5rem;
+        }
+        
+        /* Improve expander headers on mobile */
+        .streamlit-expanderHeader {
+            font-size: 0.9rem;
+            padding: 0.75rem;
+        }
+        
+        /* Make copy buttons more accessible */
+        .copy-button {
+            min-width: 60px;
+            min-height: 36px;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.85rem;
+        }
+        
+        /* Improve sidebar on mobile */
+        section[data-testid="stSidebar"] {
+            padding: 0.5rem;
+        }
+        
+        /* Better table display on mobile */
+        .dataframe {
+            font-size: 0.85rem;
+        }
+        
+        /* Improve empty state on mobile */
+        .empty-state {
+            padding: 2rem 1rem;
+        }
+        
+        .empty-state-icon {
+            font-size: 3rem;
+        }
+    }
+    
+    /* Extra small screens (phones in portrait) */
+    @media (max-width: 480px) {
+        .main-header {
+            font-size: 1.75rem;
+        }
+        
+        .stTabs [data-baseweb="tab"] {
+            padding: 6px 10px;
+            font-size: 0.8rem;
+        }
+        
+        .badge-item {
+            font-size: 0.65rem;
+            padding: 0.25rem 0.4rem;
+        }
+        
+        /* Stack columns on very small screens */
+        [data-testid="column"] {
+            width: 100% !important;
+            margin-bottom: 1rem;
+        }
+    }
+    
+    /* Improve touch targets for all interactive elements */
+    button, .stButton>button, [role="button"] {
+        min-height: 44px;
+        min-width: 44px;
+    }
+    
+    /* Better spacing for form elements */
+    .stSelectbox, .stTextInput, .stSlider {
+        margin-bottom: 1rem;
+    }
+    
+    /* Improve readability on all screen sizes */
+    body {
+        font-size: 16px; /* Prevent zoom on iOS */
+    }
+    
+    input, select, textarea {
+        font-size: 16px !important; /* Prevent zoom on iOS */
     }
     
     /* Smooth transitions for all interactive elements */
@@ -631,6 +862,94 @@ def create_stocks_dataframe(stocks):
     return pd.DataFrame(data)
 
 
+# Helper functions for new features
+def initialize_session_state():
+    """Initialize session state variables for watchlist, recent searches, etc."""
+    if 'watchlist' not in st.session_state:
+        st.session_state.watchlist = []
+    if 'recent_searches' not in st.session_state:
+        st.session_state.recent_searches = []
+    if 'last_updated' not in st.session_state:
+        st.session_state.last_updated = datetime.now()
+
+
+def add_to_watchlist(symbol: str):
+    """Add a stock symbol to the watchlist."""
+    if symbol and symbol not in st.session_state.watchlist:
+        st.session_state.watchlist.append(symbol)
+        return True
+    return False
+
+
+def remove_from_watchlist(symbol: str):
+    """Remove a stock symbol from the watchlist."""
+    if symbol in st.session_state.watchlist:
+        st.session_state.watchlist.remove(symbol)
+        return True
+    return False
+
+
+def add_to_recent_searches(symbol: str):
+    """Add a stock symbol to recent searches (max 10)."""
+    symbol = symbol.upper().strip()
+    if symbol:
+        # Remove if already exists
+        if symbol in st.session_state.recent_searches:
+            st.session_state.recent_searches.remove(symbol)
+        # Add to front
+        st.session_state.recent_searches.insert(0, symbol)
+        # Keep only last 10
+        st.session_state.recent_searches = st.session_state.recent_searches[:10]
+
+
+def get_performance_badges(stock: dict) -> list:
+    """Get performance badges for a stock based on its metrics."""
+    badges = []
+    score = stock.get('score', 0)
+    momentum = stock.get('momentum', 0)
+    rsi = stock.get('rsi', 50)
+    volume_ratio = stock.get('volume_ratio', 0)
+    
+    if score >= 90:
+        badges.append(("🏆", "Top Performer", "#10b981"))
+    elif score >= 80:
+        badges.append(("⭐", "High Score", "#3b82f6"))
+    
+    if momentum and momentum > 0.05:
+        badges.append(("🚀", "High Momentum", "#f59e0b"))
+    
+    if rsi and rsi < 30:
+        badges.append(("📉", "Oversold", "#ef4444"))
+    elif rsi and rsi > 70:
+        badges.append(("📈", "Overbought", "#8b5cf6"))
+    
+    if volume_ratio and volume_ratio > 1.5:
+        badges.append(("📊", "High Volume", "#06b6d4"))
+    
+    if stock.get('buy_signal'):
+        badges.append(("✅", "BUY Signal", "#10b981"))
+    
+    return badges
+
+
+def format_timestamp(dt: datetime) -> str:
+    """Format datetime as a readable timestamp."""
+    return dt.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def create_copy_button_html(symbol: str, button_id: str) -> str:
+    """Create HTML for copy to clipboard button - mobile-friendly."""
+    return f"""
+    <button onclick="navigator.clipboard.writeText('{symbol}'); this.innerHTML='✓ Copied!'; setTimeout(() => this.innerHTML='📋 Copy', 2000);" 
+            class="copy-button"
+            style="background: #667eea; color: white; border: none; padding: 0.5rem 0.75rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; margin: 0.25rem; min-width: 60px; min-height: 36px; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);"
+            onmouseover="this.style.background='#764ba2'; this.style.transform='scale(1.05)'"
+            onmouseout="this.style.background='#667eea'; this.style.transform='scale(1)'">
+        📋 Copy
+    </button>
+    """
+
+
 def create_price_chart(stock_data, symbol, chart_type='candlestick'):
     """
     Create interactive price chart with technical indicators.
@@ -857,6 +1176,9 @@ def create_price_chart(stock_data, symbol, chart_type='candlestick'):
 
 def main():
     """Main application function."""
+    # Initialize session state
+    initialize_session_state()
+    
     # Enhanced Header with subtitle
     st.markdown(f'<h1 class="main-header">📈 {APP_NAME}</h1>', unsafe_allow_html=True)
     st.markdown(
@@ -1128,7 +1450,41 @@ def main():
         
         if refresh_data:
             st.cache_data.clear()
+            st.session_state.last_updated = datetime.now()
             st.rerun()
+        
+        # Watchlist section
+        st.markdown("---")
+        st.markdown("### ⭐ Watchlist")
+        watchlist_col1, watchlist_col2 = st.columns([3, 1])
+        with watchlist_col1:
+            watchlist_input = st.text_input(
+                "Add to watchlist",
+                placeholder="e.g., AAPL",
+                key="watchlist_input",
+                label_visibility="collapsed"
+            ).upper().strip()
+        with watchlist_col2:
+            if st.button("➕", key="add_watchlist", help="Add symbol to watchlist"):
+                if watchlist_input:
+                    if add_to_watchlist(watchlist_input):
+                        st.success(f"Added {watchlist_input} to watchlist")
+                    else:
+                        st.info(f"{watchlist_input} is already in watchlist")
+        
+        # Display watchlist
+        if st.session_state.watchlist:
+            st.markdown("**Your Watchlist:**")
+            for symbol in st.session_state.watchlist:
+                col1, col2 = st.columns([3, 1])
+                with col1:
+                    st.text(symbol)
+                with col2:
+                    if st.button("🗑️", key=f"remove_{symbol}", help=f"Remove {symbol}"):
+                        remove_from_watchlist(symbol)
+                        st.rerun()
+        else:
+            st.caption("No stocks in watchlist. Add symbols above.")
     
     # Initialize system with enhanced loading state
     # Check if we need to refresh (new filters, period, interval, or strategy)
@@ -1146,6 +1502,16 @@ def main():
         # Calculate adaptive min_data_points for display
         adaptive_min_points = calculate_adaptive_min_data_points(selected_period, selected_interval)
         
+        # Show loading state with progress
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
+        status_text.text(f"🔄 Initializing analysis...")
+        progress_bar.progress(10)
+        
+        status_text.text(f"📊 Fetching data for {len(config.STOCK_UNIVERSE)} stocks...")
+        progress_bar.progress(30)
+        
         # Show loading state
         with st.spinner(f"🔄 **Analyzing stocks...** Fetching {selected_period_label.lower()} data with {selected_interval_label.lower()} intervals. This may take a minute."):
             qualified_stocks, data_fetcher = get_stock_data(
@@ -1153,6 +1519,15 @@ def main():
                 period=selected_period,
                 interval=selected_interval
             )
+        
+        progress_bar.progress(90)
+        status_text.text(f"✅ Analysis complete! Found {len(qualified_stocks)} qualified stocks.")
+        progress_bar.progress(100)
+        
+        # Clear progress indicators
+        time.sleep(0.5)
+        progress_bar.empty()
+        status_text.empty()
         
         # Show success message with adaptive data points info
         success_msg = st.success(
@@ -1202,6 +1577,108 @@ def main():
     
     # Enhanced Summary metrics with visual cards
     st.markdown("### 📊 Analysis Summary")
+    
+    # Quick filter buttons - use session state to track active filter
+    if 'active_quick_filter' not in st.session_state:
+        st.session_state.active_quick_filter = None
+    
+    st.markdown("**Quick Filters:**")
+    
+    # Add CSS for better button alignment
+    st.markdown("""
+    <style>
+    /* Quick filter buttons - improved alignment */
+    .stButton > button {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+        padding: 0.75rem 0.5rem;
+        min-height: 70px;
+        line-height: 1.3;
+        text-align: center;
+    }
+    
+    /* Ensure emoji and text are properly aligned */
+    .stButton > button > div {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.3rem;
+    }
+    
+    /* Icon alignment fix */
+    .stButton > button {
+        font-size: 0.85rem;
+    }
+    
+    /* Make buttons more visually appealing */
+    .stButton > button {
+        border: 2px solid #e5e7eb;
+        background: white;
+        color: #374151;
+        transition: all 0.2s ease;
+    }
+    
+    .stButton > button:hover {
+        background: #f9fafb;
+        border-color: #667eea;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(102, 126, 234, 0.15);
+    }
+    
+    /* Active filter button styling */
+    .stButton > button:active {
+        transform: translateY(0);
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Use responsive columns - stack on mobile
+    quick_filter_col1, quick_filter_col2, quick_filter_col3, quick_filter_col4, quick_filter_col5 = st.columns([1, 1, 1, 1, 1])
+    
+    with quick_filter_col1:
+        if st.button("🏆\n\nTop 10", use_container_width=True, help="Show only top 10 stocks", key="quick_top10"):
+            st.session_state.active_quick_filter = 'top10'
+            st.rerun()
+    
+    with quick_filter_col2:
+        if st.button("✅\n\nBUY Only", use_container_width=True, help="Show only stocks with BUY signals", key="quick_buy"):
+            st.session_state.active_quick_filter = 'buy'
+            st.rerun()
+    
+    with quick_filter_col3:
+        if st.button("⭐\n\nHigh Score\n(≥80)", use_container_width=True, help="Show stocks with score ≥80", key="quick_highscore"):
+            st.session_state.active_quick_filter = 'highscore'
+            st.rerun()
+    
+    with quick_filter_col4:
+        if st.button("🚀\n\nHigh\nMomentum", use_container_width=True, help="Show stocks with high momentum", key="quick_momentum"):
+            st.session_state.active_quick_filter = 'momentum'
+            st.rerun()
+    
+    with quick_filter_col5:
+        if st.button("🔄\n\nReset\nFilters", use_container_width=True, help="Reset all filters", key="quick_reset"):
+            st.session_state.active_quick_filter = None
+            st.rerun()
+    
+    # Apply quick filter if active
+    if st.session_state.active_quick_filter == 'top10':
+        filtered_stocks = filtered_stocks[:10]
+    elif st.session_state.active_quick_filter == 'buy':
+        filtered_stocks = [s for s in filtered_stocks if s.get('buy_signal', False)]
+    elif st.session_state.active_quick_filter == 'highscore':
+        filtered_stocks = [s for s in filtered_stocks if s['score'] >= 80]
+    elif st.session_state.active_quick_filter == 'momentum':
+        filtered_stocks = [s for s in filtered_stocks if s.get('momentum', 0) > 0.03]
+    
+    # Last updated timestamp
+    last_updated_time = st.session_state.get('last_updated', datetime.now())
+    st.caption(f"📅 Last updated: {format_timestamp(last_updated_time)}")
+    
+    st.markdown("---")
     
     col1, col2, col3, col4 = st.columns(4)
     
@@ -1261,11 +1738,12 @@ def main():
     st.markdown("---")
     
     # Main content area
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
         "📊 Stock Rankings", 
         "📈 Top Recommendations", 
         "🔍 Stock Details", 
         "🔎 Stock Search",
+        "⚖️ Compare Stocks",
         "🤖 AI Insights",
         "📚 How It Works"
     ])
@@ -1360,11 +1838,24 @@ def main():
                 else:
                     badge_color = "🔴"
                 
+                # Get badges for this stock
+                badges = get_performance_badges(stock)
+                badge_display = " ".join([badge[0] for badge in badges]) if badges else ""
+                
                 with st.expander(
-                    f"{badge_color} **#{i}. {stock['symbol']}** - Score: **{stock['score']:.1f}/100** | "
+                    f"{badge_color} **#{i}. {stock['symbol']}** {badge_display} - Score: **{stock['score']:.1f}/100** | "
                     f"Price: ${stock['current_price']:.2f} | Sector: {stock['sector']}",
                     expanded=(i <= 3)  # Expand first 3 by default
                 ):
+                    # Copy button and badges
+                    col_copy, col_badges = st.columns([1, 4])
+                    with col_copy:
+                        st.markdown(create_copy_button_html(stock['symbol'], f"copy_buy_{i}"), unsafe_allow_html=True)
+                    with col_badges:
+                        if badges:
+                            badge_html = '<div class="badge-container">' + "".join([f'<span class="badge-item" style="background: {badge[2]}; color: white;">{badge[0]} {badge[1]}</span>' for badge in badges]) + '</div>'
+                            st.markdown(badge_html, unsafe_allow_html=True)
+                    
                     # Metrics in a grid
                     metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
                     
@@ -1469,8 +1960,29 @@ def main():
             selected_stock = next((s for s in filtered_stocks if s['symbol'] == selected_symbol), None)
             
             if selected_stock:
-                # Enhanced stock overview with visual cards
-                st.markdown(f"#### 📊 {selected_stock['symbol']} - Overview")
+                # Header with copy button and watchlist
+                header_col1, header_col2, header_col3 = st.columns([3, 1, 1])
+                with header_col1:
+                    st.markdown(f"#### 📊 {selected_stock['symbol']} - Overview")
+                with header_col2:
+                    st.markdown(create_copy_button_html(selected_stock['symbol'], "copy_detail"), unsafe_allow_html=True)
+                with header_col3:
+                    is_in_watchlist = selected_stock['symbol'] in st.session_state.watchlist
+                    if is_in_watchlist:
+                        if st.button("⭐ Remove from Watchlist", key="remove_watchlist_detail"):
+                            remove_from_watchlist(selected_stock['symbol'])
+                            st.rerun()
+                    else:
+                        if st.button("➕ Add to Watchlist", key="add_watchlist_detail"):
+                            add_to_watchlist(selected_stock['symbol'])
+                            st.success(f"Added {selected_stock['symbol']} to watchlist")
+                            st.rerun()
+                
+                # Badges
+                badges = get_performance_badges(selected_stock)
+                if badges:
+                    badge_html = '<div class="badge-container">' + "".join([f'<span class="badge-item" style="background: {badge[2]}; color: white;">{badge[0]} {badge[1]}</span>' for badge in badges]) + '</div>'
+                    st.markdown(badge_html, unsafe_allow_html=True)
                 
                 # Score visualization
                 score = selected_stock['score']
@@ -1650,6 +2162,17 @@ def main():
         st.markdown("### 🔎 Stock Search")
         st.markdown("Search for any stock by symbol to get comprehensive analysis and insights.")
         
+        # Recent searches
+        if st.session_state.recent_searches:
+            st.markdown("**Recent Searches:**")
+            recent_cols = st.columns(min(len(st.session_state.recent_searches), 5))
+            for idx, recent_symbol in enumerate(st.session_state.recent_searches[:5]):
+                with recent_cols[idx]:
+                    if st.button(recent_symbol, key=f"recent_{recent_symbol}", use_container_width=True):
+                        st.session_state.search_symbol = recent_symbol
+                        st.rerun()
+            st.markdown("---")
+        
         # Search input
         col_search1, col_search2 = st.columns([3, 1])
         with col_search1:
@@ -1657,7 +2180,8 @@ def main():
                 "Enter Stock Symbol",
                 placeholder="e.g., AAPL, MSFT, GOOGL, TSLA",
                 help="Enter a stock ticker symbol (e.g., AAPL for Apple Inc.)",
-                key="stock_search_input"
+                key="stock_search_input",
+                value=st.session_state.get('search_symbol', '')
             ).upper().strip()
         
         with col_search2:
@@ -1734,8 +2258,22 @@ def main():
                             searched_stock['buy_signal'] = should_buy
                             searched_stock['buy_reason'] = reason
                             
+                            # Add to recent searches
+                            add_to_recent_searches(search_symbol)
+                            
                             # Display results
                             st.success(f"✅ **Successfully analyzed {search_symbol}**")
+                            
+                            # Copy button and badges
+                            col_copy, col_badges = st.columns([1, 4])
+                            with col_copy:
+                                st.markdown(create_copy_button_html(search_symbol, "copy_search"), unsafe_allow_html=True)
+                            with col_badges:
+                                badges = get_performance_badges(searched_stock)
+                                if badges:
+                                    badge_html = '<div class="badge-container">' + "".join([f'<span class="badge-item" style="background: {badge[2]}; color: white;">{badge[0]} {badge[1]}</span>' for badge in badges]) + '</div>'
+                                    st.markdown(badge_html, unsafe_allow_html=True)
+                            
                             st.markdown("---")
                             
                             # Stock Overview
@@ -2004,7 +2542,7 @@ def main():
             **💡 Tip**: You can search for any stock listed on major exchanges (NYSE, NASDAQ, etc.)
             """)
     
-    with tab5:
+    with tab6:
         st.markdown("### 🤖 AI Insights & Analysis")
         st.markdown("AI-powered insights, recommendations, and market sentiment analysis.")
         
@@ -2113,7 +2651,7 @@ def main():
             - Automated strategy suggestions
             """)
     
-    with tab6:
+    with tab5:
         st.header("📚 Stock Selection Process Explained")
         
         st.markdown("""
