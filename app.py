@@ -2652,6 +2652,206 @@ def main():
             """)
     
     with tab5:
+        st.markdown("### ⚖️ Compare Stocks")
+        st.markdown("Compare up to 3 stocks side-by-side to make informed investment decisions.")
+        
+        # Stock selection for comparison
+        comparison_stocks = []
+        available_symbols = [s['symbol'] for s in filtered_stocks] if filtered_stocks else []
+        
+        if not available_symbols:
+            st.warning("⚠️ No stocks available for comparison. Please adjust your filters first.")
+        else:
+            # Allow selection from filtered stocks or manual entry
+            st.markdown("#### Select Stocks to Compare")
+            
+            compare_col1, compare_col2, compare_col3 = st.columns(3)
+            
+            with compare_col1:
+                stock1 = st.selectbox(
+                    "Stock 1",
+                    options=[""] + available_symbols,
+                    key="compare_stock1"
+                )
+                if stock1:
+                    stock1_manual = st.text_input("Or enter symbol", key="compare_stock1_manual", value="").upper().strip()
+                    if stock1_manual:
+                        stock1 = stock1_manual
+            
+            with compare_col2:
+                stock2 = st.selectbox(
+                    "Stock 2",
+                    options=[""] + available_symbols,
+                    key="compare_stock2"
+                )
+                if stock2:
+                    stock2_manual = st.text_input("Or enter symbol", key="compare_stock2_manual", value="").upper().strip()
+                    if stock2_manual:
+                        stock2 = stock2_manual
+            
+            with compare_col3:
+                stock3 = st.selectbox(
+                    "Stock 3 (Optional)",
+                    options=[""] + available_symbols,
+                    key="compare_stock3"
+                )
+                if stock3:
+                    stock3_manual = st.text_input("Or enter symbol", key="compare_stock3_manual", value="").upper().strip()
+                    if stock3_manual:
+                        stock3 = stock3_manual
+            
+            compare_button = st.button("🔍 Compare Stocks", type="primary", use_container_width=True)
+            
+            if compare_button:
+                comparison_symbols = [s for s in [stock1, stock2, stock3] if s]
+                
+                if len(comparison_symbols) < 2:
+                    st.warning("⚠️ Please select at least 2 stocks to compare.")
+                else:
+                    with st.spinner("🔄 Fetching and analyzing stocks for comparison..."):
+                        comparison_data = []
+                        search_period = st.session_state.get('period', selected_period)
+                        search_interval = st.session_state.get('interval', selected_interval)
+                        compare_data_fetcher = DataFetcher()
+                        
+                        for symbol in comparison_symbols:
+                            try:
+                                # Fetch stock data
+                                stock_data = compare_data_fetcher.get_stock_data(
+                                    symbol, 
+                                    period=search_period, 
+                                    interval=search_interval
+                                )
+                                
+                                if stock_data is not None and not stock_data.empty:
+                                    # Calculate technical indicators
+                                    stock_data = compare_data_fetcher.calculate_technical_indicators(stock_data)
+                                    
+                                    # Get stock info
+                                    stock_info = compare_data_fetcher.get_stock_info(symbol)
+                                    
+                                    if stock_info is None:
+                                        stock_info = {
+                                            'symbol': symbol,
+                                            'market_cap': 0,
+                                            'sector': 'Unknown',
+                                            'industry': 'Unknown',
+                                            'current_price': float(stock_data['Close'].iloc[-1]),
+                                            'volume': int(stock_data['Volume'].iloc[-1]) if not stock_data['Volume'].empty else 0,
+                                            'avg_volume': 0,
+                                            'pe_ratio': None,
+                                            'dividend_yield': 0
+                                        }
+                                    
+                                    # Create stock data structure
+                                    latest = stock_data.iloc[-1]
+                                    current_price = float(latest['Close'])
+                                    
+                                    compare_stock = {
+                                        'symbol': symbol,
+                                        'current_price': current_price,
+                                        'rsi': float(latest['RSI']) if not pd.isna(latest['RSI']) else None,
+                                        'momentum': float(latest['Momentum']) if not pd.isna(latest['Momentum']) else None,
+                                        'volume_ratio': float(latest['Volume_Ratio']) if not pd.isna(latest['Volume_Ratio']) else None,
+                                        'market_cap': stock_info.get('market_cap', 0),
+                                        'sector': stock_info.get('sector', 'Unknown'),
+                                        'industry': stock_info.get('industry', 'Unknown'),
+                                        'data': stock_data,
+                                        'info': stock_info
+                                    }
+                                    
+                                    # Calculate score
+                                    stock_selector = StockSelector(compare_data_fetcher)
+                                    compare_stock['score'] = stock_selector._calculate_score(stock_data, stock_info)
+                                    
+                                    # Generate buy signal
+                                    strategy = TradingStrategy()
+                                    should_buy, reason = strategy.generate_buy_signal(compare_stock)
+                                    compare_stock['buy_signal'] = should_buy
+                                    compare_stock['buy_reason'] = reason
+                                    
+                                    comparison_data.append(compare_stock)
+                                else:
+                                    st.warning(f"⚠️ Could not fetch data for {symbol}")
+                            except Exception as e:
+                                st.error(f"❌ Error analyzing {symbol}: {str(e)}")
+                        
+                        if comparison_data:
+                            st.success(f"✅ Successfully compared {len(comparison_data)} stocks")
+                            st.markdown("---")
+                            
+                            # Comparison table
+                            st.markdown("#### 📊 Side-by-Side Comparison")
+                            
+                            # Create comparison DataFrame
+                            compare_df_data = []
+                            for stock in comparison_data:
+                                compare_df_data.append({
+                                    'Symbol': stock['symbol'],
+                                    'Score': f"{stock['score']:.1f}",
+                                    'Price': f"${stock['current_price']:.2f}",
+                                    'RSI': f"{stock['rsi']:.1f}" if stock['rsi'] else "N/A",
+                                    'Momentum': f"{stock['momentum']*100:+.2f}%" if stock['momentum'] else "N/A",
+                                    'Volume Ratio': f"{stock.get('volume_ratio', 0):.2f}x" if stock.get('volume_ratio') else "N/A",
+                                    'Market Cap': f"${stock['market_cap']/1e9:.1f}B" if stock['market_cap'] > 0 else "N/A",
+                                    'Sector': stock['sector'],
+                                    'Signal': "✅ BUY" if stock.get('buy_signal') else "⏸️ HOLD"
+                                })
+                            
+                            compare_df = pd.DataFrame(compare_df_data)
+                            st.dataframe(compare_df, use_container_width=True, hide_index=True)
+                            
+                            # Metrics comparison
+                            st.markdown("---")
+                            st.markdown("#### 📈 Key Metrics Comparison")
+                            
+                            num_stocks = len(comparison_data)
+                            metric_cols = st.columns(num_stocks)
+                            
+                            for idx, stock in enumerate(comparison_data):
+                                with metric_cols[idx]:
+                                    st.markdown(f"**{stock['symbol']}**")
+                                    
+                                    # Badges
+                                    badges = get_performance_badges(stock)
+                                    if badges:
+                                        badge_html = '<div class="badge-container">' + "".join([f'<span class="badge-item" style="background: {badge[2]}; color: white;">{badge[0]} {badge[1]}</span>' for badge in badges]) + '</div>'
+                                        st.markdown(badge_html, unsafe_allow_html=True)
+                                    
+                                    st.metric("Score", f"{stock['score']:.1f}")
+                                    st.metric("Price", f"${stock['current_price']:.2f}")
+                                    st.metric("RSI", f"{stock['rsi']:.1f}" if stock['rsi'] else "N/A")
+                                    st.metric("Momentum", f"{stock['momentum']*100:+.2f}%" if stock['momentum'] else "N/A")
+                                    st.metric("Signal", "✅ BUY" if stock.get('buy_signal') else "⏸️ HOLD")
+                            
+                            # Charts comparison
+                            st.markdown("---")
+                            st.markdown("#### 📊 Price Charts Comparison")
+                            
+                            current_chart_type = st.session_state.get('chart_type', 'candlestick')
+                            chart_cols = st.columns(num_stocks)
+                            
+                            for idx, stock in enumerate(comparison_data):
+                                with chart_cols[idx]:
+                                    st.markdown(f"**{stock['symbol']}**")
+                                    chart = create_price_chart(stock, stock['symbol'], chart_type=current_chart_type)
+                                    if chart:
+                                        st.plotly_chart(chart, use_container_width=True, key=f"compare_chart_{stock['symbol']}")
+                            
+                            # AI Insights comparison
+                            st.markdown("---")
+                            st.markdown("#### 🤖 AI Insights Comparison")
+                            
+                            ai = AIInsights()
+                            insight_cols = st.columns(num_stocks)
+                            
+                            for idx, stock in enumerate(comparison_data):
+                                with insight_cols[idx]:
+                                    st.markdown(f"**{stock['symbol']}**")
+                                    insight = ai.generate_stock_insight(stock)
+                                    st.markdown(insight)
+    
+    with tab7:
         st.header("📚 Stock Selection Process Explained")
         
         st.markdown("""
