@@ -3252,5 +3252,12 @@ TOTAL_STOCKS = {len(config.STOCK_UNIVERSE)}
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        st.error(f"❌ **Application Error**: {str(e)}")
+        st.info("💡 **Troubleshooting**: Please refresh the page. If the error persists, check the logs or contact support.")
+        import traceback
+        with st.expander("🔍 Technical Details (for debugging)"):
+            st.code(traceback.format_exc())
 

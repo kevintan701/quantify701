@@ -1,10 +1,7 @@
-# Streamlit configuration file
-# This file is used when deploying to Streamlit Cloud or running locally
-
 [server]
 headless = true
 port = 8501
-enableCORS = true
+enableCORS = false
 enableXsrfProtection = true
 
 [theme]
@@ -16,4 +13,3 @@ font = "sans serif"
 
 [browser]
 gatherUsageStats = false
-
