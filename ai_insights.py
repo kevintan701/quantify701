@@ -82,16 +82,18 @@ class AIInsights:
             elif rsi > 70:  # Overbought - wait for pullback
                 rsi_adjustment = -0.05  # 5% below
         
-        # Strategy-based adjustments
+        # Strategy-based adjustments for entry price
+        # Conservative: Wait for better prices (lower entry, more patient)
+        # Aggressive: Enter sooner (higher entry, capture momentum)
         strategy_multipliers = {
-            'Conservative': 0.98,  # More conservative, buy slightly below
-            'Default': 1.0,
-            'Aggressive': 1.02,  # More aggressive, can buy at or slightly above
-            'Momentum': 1.01,  # Momentum strategy, slight premium OK
-            'Value': 0.97,  # Value strategy, wait for discount
-            'Dividend Focus': 0.99  # Slight discount preferred
+            'Conservative': 0.94,  # Wait for 6% discount - more patient entry
+            'Default': 0.98,  # Slight discount preferred
+            'Aggressive': 1.01,  # Can enter at or slightly above - capture momentum
+            'Momentum': 1.02,  # Momentum strategy, enter quickly
+            'Value': 0.92,  # Value strategy, wait for significant discount
+            'Dividend Focus': 0.96  # Slight discount preferred for dividend stocks
         }
-        strategy_mult = strategy_multipliers.get(strategy, 1.0)
+        strategy_mult = strategy_multipliers.get(strategy, 0.98)
         
         # Calculate suggested price
         if support_levels:
@@ -328,6 +330,279 @@ class AIInsights:
         
         return " ".join(insights)
     
+    def calculate_sell_targets(
+        self, 
+        stock: Dict, 
+        entry_price: Optional[float] = None,
+        strategy: str = "Default"
+    ) -> Dict:
+        """
+        Calculate target sell prices and suggested hold time based on technical analysis.
+        
+        Args:
+            stock: Stock data dictionary
+            entry_price: Optional entry price (uses current_price if not provided)
+            strategy: Selected strategy preset (Default, Conservative, Aggressive, etc.)
+            
+        Returns:
+            Dictionary with sell targets, hold time, and reasoning
+        """
+        current_price = stock['current_price']
+        entry_price = entry_price if entry_price else current_price
+        data = stock.get('data')
+        
+        if data is None or data.empty:
+            # Default conservative targets if no data
+            return {
+                'target_sell_price': current_price * 1.15,  # 15% target
+                'stop_loss_price': current_price * 0.95,  # 5% stop loss
+                'conservative_target': current_price * 1.10,  # 10% conservative
+                'aggressive_target': current_price * 1.25,  # 25% aggressive
+                'suggested_hold_days': 90,  # 3 months default
+                'suggested_hold_months': 3,
+                'reasoning': 'Insufficient data for precise calculation',
+                'sell_strategy': 'Conservative'
+            }
+        
+        latest = data.iloc[-1]
+        momentum = stock.get('momentum', 0)
+        rsi = stock.get('rsi')
+        volatility = latest.get('Volatility', 0.02)
+        score = stock.get('score', 50)
+        
+        # Calculate resistance levels (potential sell targets)
+        resistance_levels = []
+        
+        # 1. Bollinger Upper Band as resistance
+        bb_upper = latest.get('BB_Upper')
+        if pd.notna(bb_upper) and bb_upper > current_price:
+            resistance_levels.append(('Bollinger Upper', bb_upper))
+        
+        # 2. Moving averages as potential targets
+        sma_20 = latest.get('SMA_20')
+        sma_50 = latest.get('SMA_50')
+        if pd.notna(sma_20) and sma_20 > current_price:
+            resistance_levels.append(('SMA 20', sma_20))
+        if pd.notna(sma_50) and sma_50 > current_price:
+            resistance_levels.append(('SMA 50', sma_50))
+        
+        # 3. Recent high (last 60 days) as resistance
+        if len(data) >= 60:
+            recent_high = data['High'].tail(60).max()
+            if recent_high > current_price:
+                resistance_levels.append(('Recent High', recent_high))
+        
+        # 4. Calculate target based on momentum and volatility
+        # Strong momentum = higher targets, high volatility = wider range
+        if momentum and momentum > 0.05:
+            # Strong momentum: target 15-25% gain
+            base_target_pct = 0.20
+        elif momentum and momentum > 0.02:
+            # Moderate momentum: target 10-18% gain
+            base_target_pct = 0.14
+        elif momentum and momentum > 0:
+            # Weak momentum: target 8-15% gain
+            base_target_pct = 0.11
+        else:
+            # No momentum: conservative 5-12% target
+            base_target_pct = 0.08
+        
+        # Adjust based on score (higher score = more confidence = higher targets)
+        score_multiplier = 0.8 + (score / 100) * 0.4  # Range: 0.8 to 1.2
+        base_target_pct *= score_multiplier
+        
+        # Strategy-based target adjustments
+        # Conservative: Lower targets (take profits earlier, reduce risk)
+        # Aggressive: Higher targets (hold for bigger gains)
+        strategy_target_multipliers = {
+            'Conservative': 0.75,  # 25% lower targets - take profits earlier
+            'Default': 1.0,  # No adjustment
+            'Aggressive': 1.3,  # 30% higher targets - aim for bigger gains
+            'Momentum': 1.4,  # 40% higher targets - ride the momentum
+            'Value': 0.9,  # Slightly lower - value investing patience
+            'Dividend Focus': 0.85  # Lower targets - focus on dividends
+        }
+        target_multiplier = strategy_target_multipliers.get(strategy, 1.0)
+        base_target_pct *= target_multiplier
+        
+        # Adjust for volatility (higher volatility = wider targets)
+        vol_adjustment = min(volatility * 10, 0.1)  # Up to 10% adjustment
+        
+        # Strategy-specific volatility adjustments
+        if strategy == 'Conservative':
+            # Conservative: Tighter range, less volatility tolerance
+            vol_adjustment *= 0.7  # Reduce volatility impact
+        elif strategy == 'Aggressive' or strategy == 'Momentum':
+            # Aggressive: Wider range, more volatility tolerance
+            vol_adjustment *= 1.2  # Increase volatility impact
+        
+        conservative_target_pct = base_target_pct - vol_adjustment
+        aggressive_target_pct = base_target_pct + vol_adjustment
+        
+        # Calculate base targets first (always positive)
+        calculated_target = entry_price * (1 + base_target_pct)
+        
+        # Use resistance levels if available AND above entry price, otherwise use calculated targets
+        if resistance_levels:
+            # Filter to only resistance levels above entry price
+            valid_resistances = [r for r in resistance_levels if r[1] > entry_price]
+            
+            if valid_resistances:
+                # Use the lowest valid resistance (most achievable)
+                closest_resistance = min(valid_resistances, key=lambda x: x[1])
+                resistance_target = closest_resistance[1]
+                resistance_name = closest_resistance[0]
+                
+                # Use resistance if it's reasonable (at least 5% above entry), otherwise use calculated
+                if resistance_target >= entry_price * 1.05:
+                    target_sell_price = resistance_target
+                else:
+                    # Resistance too close to entry, use calculated target instead
+                    target_sell_price = max(calculated_target, entry_price * 1.08)  # At least 8% gain
+                    resistance_name = "Calculated target (resistance too close)"
+            else:
+                # All resistances below entry price, use calculated target
+                target_sell_price = max(calculated_target, entry_price * 1.08)  # At least 8% gain
+                resistance_name = "Calculated target"
+        else:
+            # No resistance levels, use calculated target
+            target_sell_price = max(calculated_target, entry_price * 1.08)  # At least 8% gain
+            resistance_name = "Calculated target"
+        
+        # Ensure target is always above entry price with minimum gain
+        target_sell_price = max(target_sell_price, entry_price * 1.05)  # At least 5% gain
+        
+        # Conservative target (take profit earlier) - ensure minimum 5% gain
+        conservative_target = entry_price * (1 + max(conservative_target_pct, 0.05))
+        
+        # Aggressive target (hold for more gains) - ensure minimum 8% gain
+        aggressive_target = entry_price * (1 + max(aggressive_target_pct, 0.08))
+        
+        # Ensure proper ordering: conservative < target < aggressive
+        # If conservative is too high, adjust it
+        if conservative_target >= target_sell_price:
+            conservative_target = entry_price * (1 + ((target_sell_price / entry_price - 1) * 0.7))  # 70% of target
+        
+        # If aggressive is too low, adjust it
+        if aggressive_target <= target_sell_price:
+            aggressive_target = entry_price * (1 + ((target_sell_price / entry_price - 1) * 1.3))  # 30% above target
+        
+        # Final validation: ensure all targets are above entry price
+        conservative_target = max(conservative_target, entry_price * 1.05)
+        target_sell_price = max(target_sell_price, conservative_target * 1.02)  # At least 2% above conservative
+        aggressive_target = max(aggressive_target, target_sell_price * 1.05)  # At least 5% above target
+        
+        # Stop loss (5% below entry, or use volatility-based)
+        stop_loss_pct = max(0.05, volatility * 2)  # At least 5%, or 2x volatility
+        stop_loss_price = entry_price * (1 - stop_loss_pct)
+        
+        # Calculate base suggested hold time based on momentum and volatility
+        # Strong momentum = shorter hold (quick gains), weak momentum = longer hold
+        if momentum and momentum > 0.05:
+            # Strong momentum: 1-3 months base
+            base_days = 45
+            base_months = 1.5
+        elif momentum and momentum > 0.02:
+            # Moderate momentum: 2-4 months base
+            base_days = 75
+            base_months = 2.5
+        elif momentum and momentum > 0:
+            # Weak momentum: 3-6 months base
+            base_days = 120
+            base_months = 4
+        else:
+            # No momentum: 6-12 months base
+            base_days = 180
+            base_months = 6
+        
+        # Adjust for volatility (high volatility = shorter hold due to risk)
+        if volatility > 0.04:
+            base_days = int(base_days * 0.7)  # Reduce by 30%
+            base_months = base_days / 30
+        elif volatility > 0.025:
+            base_days = int(base_days * 0.85)  # Reduce by 15%
+            base_months = base_days / 30
+        
+        # Strategy-based hold time adjustments
+        # Conservative: Hold longer (patience, let value compound)
+        # Aggressive: Hold shorter (quick gains, capture momentum)
+        strategy_hold_multipliers = {
+            'Conservative': 1.5,  # Hold 50% longer - more patient
+            'Default': 1.0,  # No adjustment
+            'Aggressive': 0.7,  # Hold 30% shorter - quick gains
+            'Momentum': 0.6,  # Hold 40% shorter - capture momentum quickly
+            'Value': 2.0,  # Hold 2x longer - value investing patience
+            'Dividend Focus': 1.8  # Hold longer for dividend accumulation
+        }
+        hold_multiplier = strategy_hold_multipliers.get(strategy, 1.0)
+        
+        suggested_days = int(base_days * hold_multiplier)
+        suggested_months = round(suggested_days / 30, 1)
+        
+        # Ensure minimum hold times
+        if strategy == 'Conservative' or strategy == 'Value' or strategy == 'Dividend Focus':
+            suggested_days = max(suggested_days, 90)  # At least 3 months for conservative
+            suggested_months = max(suggested_months, 3.0)
+        elif strategy == 'Aggressive' or strategy == 'Momentum':
+            suggested_days = max(suggested_days, 30)  # At least 1 month for aggressive
+            suggested_months = max(suggested_months, 1.0)
+        
+        # Determine sell strategy based on user selection
+        # Map strategy names to sell strategy labels
+        strategy_mapping = {
+            'Conservative': 'Conservative',
+            'Default': 'Moderate',
+            'Aggressive': 'Aggressive',
+            'Momentum': 'Aggressive',
+            'Value': 'Conservative',
+            'Dividend Focus': 'Conservative'
+        }
+        
+        # Use selected strategy from mapping, default to 'Moderate' if not found
+        sell_strategy = strategy_mapping.get(strategy, 'Moderate')
+        
+        # Build reasoning
+        reasoning_parts = []
+        if resistance_levels:
+            reasoning_parts.append(f"Target based on {resistance_name} resistance level")
+        else:
+            reasoning_parts.append(f"Target calculated from momentum ({momentum*100:.1f}%) and volatility ({volatility*100:.2f}%)")
+        
+        # Add strategy-specific reasoning
+        entry_discount_pct = ((current_price - entry_price) / current_price) * 100 if entry_price < current_price else 0
+        
+        if strategy == 'Conservative':
+            reasoning_parts.append(f"{strategy} strategy: Lower entry price (waiting for better prices), longer hold ({suggested_days} days) for steady gains")
+        elif strategy == 'Aggressive' or strategy == 'Momentum':
+            reasoning_parts.append(f"{strategy} strategy: Higher entry tolerance, shorter hold ({suggested_days} days) to capture momentum quickly")
+        else:
+            if momentum and momentum > 0.05:
+                reasoning_parts.append("Strong momentum suggests shorter holding period for quick gains")
+            elif momentum and momentum <= 0:
+                reasoning_parts.append("Weak momentum suggests longer holding period for value appreciation")
+        
+        if volatility > 0.04:
+            reasoning_parts.append("High volatility requires tighter stop-loss and adjusted holding period")
+        
+        reasoning = ". ".join(reasoning_parts) if reasoning_parts else "Based on technical analysis"
+        
+        return {
+            'target_sell_price': round(target_sell_price, 2),
+            'stop_loss_price': round(stop_loss_price, 2),
+            'conservative_target': round(conservative_target, 2),
+            'aggressive_target': round(aggressive_target, 2),
+            'suggested_hold_days': int(suggested_days),
+            'suggested_hold_months': round(suggested_months, 1),
+            'suggested_hold_weeks': int(suggested_days / 7),
+            'potential_gain_pct': round(((target_sell_price - entry_price) / entry_price) * 100, 1),
+            'conservative_gain_pct': round(((conservative_target - entry_price) / entry_price) * 100, 1),
+            'aggressive_gain_pct': round(((aggressive_target - entry_price) / entry_price) * 100, 1),
+            'stop_loss_pct': round(stop_loss_pct * 100, 1),
+            'reasoning': reasoning,
+            'sell_strategy': sell_strategy,
+            'entry_price': round(entry_price, 2)
+        }
+    
     def generate_recommendation(self, stock: Dict) -> Dict:
         """
         Generate AI-powered recommendation for a stock with clear, supportive reasoning.
@@ -399,16 +674,23 @@ class AIInsights:
                 recommendation['risk_level'] = 'Low'
                 recommendation['detailed_reasoning'].append(f"Low volatility ({volatility*100:.2f}%) indicates stable price action, suitable for risk-averse investors.")
         
-        # Determine time horizon with explanation
-        if momentum and momentum > 0.05:
-            recommendation['time_horizon'] = 'Short to Medium-term (1-6 months)'
-            recommendation['detailed_reasoning'].append("Strong momentum suggests potential for near-term gains, making this suitable for shorter holding periods.")
-        elif momentum and momentum > 0:
-            recommendation['time_horizon'] = 'Medium-term (3-12 months)'
-            recommendation['detailed_reasoning'].append("Moderate momentum indicates steady growth potential over the medium term.")
+        # Calculate sell targets and hold time
+        sell_targets = self.calculate_sell_targets(stock, stock['current_price'])
+        recommendation['sell_targets'] = sell_targets
+        
+        # Determine time horizon with explanation (using calculated hold time)
+        suggested_months = sell_targets['suggested_hold_months']
+        suggested_days = sell_targets['suggested_hold_days']
+        
+        if suggested_months <= 2:
+            recommendation['time_horizon'] = f'Short-term ({suggested_days} days / ~{suggested_months:.1f} months)'
+            recommendation['detailed_reasoning'].append(f"Strong momentum suggests potential for near-term gains. Suggested hold period: {suggested_days} days (~{suggested_months:.1f} months).")
+        elif suggested_months <= 6:
+            recommendation['time_horizon'] = f'Medium-term ({suggested_days} days / ~{suggested_months:.1f} months)'
+            recommendation['detailed_reasoning'].append(f"Moderate momentum indicates steady growth potential. Suggested hold period: {suggested_days} days (~{suggested_months:.1f} months).")
         else:
-            recommendation['time_horizon'] = 'Long-term (1+ years)'
-            recommendation['detailed_reasoning'].append("Lower momentum suggests this may be better suited for long-term value appreciation rather than quick gains.")
+            recommendation['time_horizon'] = f'Long-term ({suggested_days} days / ~{suggested_months:.1f} months)'
+            recommendation['detailed_reasoning'].append(f"Lower momentum suggests longer holding period for value appreciation. Suggested hold period: {suggested_days} days (~{suggested_months:.1f} months).")
         
         # Build comprehensive reasoning
         if buy_signal:
@@ -452,7 +734,18 @@ class AIInsights:
         
         recommendation['summary'] = f"{action_emoji} **{recommendation['action']}** {symbol} with {confidence_emoji} **{confidence} confidence**"
         recommendation['summary'] += f"\n\n**Risk Level**: {recommendation['risk_level']}"
-        recommendation['summary'] += f"\n**Time Horizon**: {recommendation['time_horizon']}"
+        recommendation['summary'] += f"\n**Suggested Hold Time**: {recommendation['time_horizon']}"
+        
+        # Add sell targets information
+        if 'sell_targets' in recommendation:
+            targets = recommendation['sell_targets']
+            recommendation['summary'] += f"\n\n**💰 Sell Targets:**"
+            recommendation['summary'] += f"\n- **Target Sell Price**: ${targets['target_sell_price']:.2f} (+{targets['potential_gain_pct']:.1f}%)"
+            recommendation['summary'] += f"\n- **Conservative Target**: ${targets['conservative_target']:.2f} (+{targets['conservative_gain_pct']:.1f}%)"
+            recommendation['summary'] += f"\n- **Aggressive Target**: ${targets['aggressive_target']:.2f} (+{targets['aggressive_gain_pct']:.1f}%)"
+            recommendation['summary'] += f"\n- **Stop Loss**: ${targets['stop_loss_price']:.2f} (-{targets['stop_loss_pct']:.1f}%)"
+            recommendation['summary'] += f"\n- **Strategy**: {targets['sell_strategy']}"
+            recommendation['summary'] += f"\n- **Reasoning**: {targets['reasoning']}"
         
         if recommendation['detailed_reasoning']:
             recommendation['summary'] += "\n\n**Why this recommendation?**\n"

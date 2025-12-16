@@ -1881,9 +1881,11 @@ def main():
                     # BUY signal reason in highlighted box
                     st.success(f"✅ **BUY Signal:** {stock['buy_reason']}")
                     
+                    # Initialize AI insights
+                    ai = AIInsights()
+                    
                     # Suggested Buy Price
                     st.markdown("#### 💰 Suggested Buy Price")
-                    ai = AIInsights()
                     buy_price_info = ai.calculate_suggested_buy_price(
                         stock, 
                         strategy=selected_strategy,
@@ -1905,6 +1907,89 @@ def main():
                     st.caption(f"💡 **Reasoning**: {buy_price_info['reasoning']}")
                     st.info(f"**Current Price**: ${buy_price_info['current_price']:.2f} | **Suggested Entry**: ${buy_price_info['suggested_price']:.2f}")
                     
+                    # Sell Targets and Hold Time - Prominently Displayed
+                    st.markdown("---")
+                    st.markdown("#### 🎯 Sell Targets & Hold Strategy")
+                    
+                    # Calculate sell targets using suggested buy price as entry
+                    sell_targets = ai.calculate_sell_targets(
+                        stock, 
+                        buy_price_info['suggested_price'],
+                        strategy=selected_strategy
+                    )
+                    
+                    # Display hold time prominently
+                    hold_col1, hold_col2, hold_col3 = st.columns(3)
+                    with hold_col1:
+                        st.metric(
+                            "📅 Suggested Hold Time",
+                            f"{sell_targets['suggested_hold_days']} days",
+                            delta=f"~{sell_targets['suggested_hold_months']:.1f} months"
+                        )
+                    with hold_col2:
+                        st.metric(
+                            "📊 Strategy",
+                            sell_targets['sell_strategy']
+                        )
+                    with hold_col3:
+                        st.metric(
+                            "🎯 Target Gain",
+                            f"+{sell_targets['potential_gain_pct']:.1f}%",
+                            delta=f"${sell_targets['target_sell_price']:.2f}"
+                        )
+                    
+                    # Display sell targets in columns
+                    st.markdown("**💰 Sell Price Targets:**")
+                    target_col1, target_col2, target_col3, target_col4 = st.columns(4)
+                    
+                    with target_col1:
+                        st.metric(
+                            "🎯 Target Price",
+                            f"${sell_targets['target_sell_price']:.2f}",
+                            delta=f"+{sell_targets['potential_gain_pct']:.1f}%"
+                        )
+                        st.caption("Primary target")
+                    
+                    with target_col2:
+                        st.metric(
+                            "🛡️ Conservative",
+                            f"${sell_targets['conservative_target']:.2f}",
+                            delta=f"+{sell_targets['conservative_gain_pct']:.1f}%"
+                        )
+                        st.caption("Take profit early")
+                    
+                    with target_col3:
+                        st.metric(
+                            "🚀 Aggressive",
+                            f"${sell_targets['aggressive_target']:.2f}",
+                            delta=f"+{sell_targets['aggressive_gain_pct']:.1f}%"
+                        )
+                        st.caption("Hold for more gains")
+                    
+                    with target_col4:
+                        st.metric(
+                            "🛑 Stop Loss",
+                            f"${sell_targets['stop_loss_price']:.2f}",
+                            delta=f"-{sell_targets['stop_loss_pct']:.1f}%"
+                        )
+                        st.caption("Risk management")
+                    
+                    # Display reasoning for sell targets
+                    st.info(f"💡 **Sell Strategy Reasoning**: {sell_targets['reasoning']}")
+                    
+                    # Summary box with key information
+                    st.markdown("**📋 Position Summary:**")
+                    summary_text = f"""
+                    - **Entry Price**: ${buy_price_info['suggested_price']:.2f}
+                    - **Target Sell**: ${sell_targets['target_sell_price']:.2f} (+{sell_targets['potential_gain_pct']:.1f}%)
+                    - **Hold Period**: {sell_targets['suggested_hold_days']} days (~{sell_targets['suggested_hold_months']:.1f} months)
+                    - **Stop Loss**: ${sell_targets['stop_loss_price']:.2f} (-{sell_targets['stop_loss_pct']:.1f}%)
+                    - **Strategy**: {sell_targets['sell_strategy']}
+                    """
+                    st.markdown(summary_text)
+                    
+                    st.markdown("---")
+                    
                     # AI Insight for each recommendation
                     st.markdown("#### 🤖 AI Insight")
                     ai_insight = ai.generate_stock_insight(stock)
@@ -1912,7 +1997,7 @@ def main():
                     
                     # AI Recommendation
                     recommendation = ai.generate_recommendation(stock)
-                    st.markdown("#### 🎯 AI Recommendation")
+                    st.markdown("#### 🎯 Full AI Recommendation")
                     st.markdown(recommendation['summary'])
                     
                     # Show chart
