@@ -20,6 +20,9 @@ from data_fetcher import DataFetcher
 from stock_selector import StockSelector
 from trading_strategy import TradingStrategy
 from ai_insights import AIInsights
+from database import Database
+from auth import AuthManager
+from legal_pages import get_terms_of_service, get_privacy_policy
 import config
 
 
@@ -873,6 +876,12 @@ def initialize_session_state():
         st.session_state.recent_searches = []
     if 'last_updated' not in st.session_state:
         st.session_state.last_updated = datetime.now()
+    if 'db' not in st.session_state:
+        st.session_state.db = Database()
+    if 'auth' not in st.session_state:
+        st.session_state.auth = AuthManager(st.session_state.db)
+    if 'show_new_portfolio' not in st.session_state:
+        st.session_state.show_new_portfolio = False
 
 
 def add_to_watchlist(symbol: str):
@@ -1194,6 +1203,57 @@ def main():
     
     # Sidebar for controls with enhanced organization
     with st.sidebar:
+        # Authentication Section
+        auth = st.session_state.auth
+        if auth.is_authenticated():
+            user = auth.get_current_user()
+            st.markdown(f"""
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                        padding: 1rem; border-radius: 8px; margin-bottom: 1rem; color: white;">
+                <p style="margin: 0; font-weight: 600;">👤 {user['username']}</p>
+                <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; opacity: 0.9;">
+                    {user.get('subscription_tier', 'free').upper()} Plan
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+            if st.button("🚪 Logout", use_container_width=True):
+                auth.logout()
+        else:
+            st.markdown("### 🔐 Account")
+            login_tab, register_tab = st.tabs(["Login", "Register"])
+            
+            with login_tab:
+                with st.form("login_form"):
+                    login_username = st.text_input("Username or Email", key="login_username")
+                    login_password = st.text_input("Password", type="password", key="login_password")
+                    login_submit = st.form_submit_button("Login", use_container_width=True)
+                    
+                    if login_submit:
+                        success, message = auth.login(login_username, login_password)
+                        if success:
+                            st.success(message)
+                            st.rerun()
+                        else:
+                            st.error(message)
+            
+            with register_tab:
+                with st.form("register_form"):
+                    reg_username = st.text_input("Username", key="reg_username")
+                    reg_email = st.text_input("Email", key="reg_email")
+                    reg_password = st.text_input("Password", type="password", key="reg_password")
+                    reg_confirm = st.text_input("Confirm Password", type="password", key="reg_confirm")
+                    reg_submit = st.form_submit_button("Register", use_container_width=True)
+                    
+                    if reg_submit:
+                        success, message = auth.register(reg_username, reg_email, reg_password, reg_confirm)
+                        if success:
+                            st.success(message)
+                            st.rerun()
+                        else:
+                            st.error(message)
+            
+            st.markdown("---")
+        
         # Header with branding
         st.markdown(f"""
         <div style="text-align: center; padding: 1rem 0; border-bottom: 2px solid #667eea; margin-bottom: 1.5rem;">
@@ -1743,14 +1803,16 @@ def main():
     st.markdown("---")
     
     # Main content area
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
         "📊 Stock Rankings", 
         "📈 Top Recommendations", 
         "🔍 Stock Details", 
         "🔎 Stock Search",
         "⚖️ Compare Stocks",
         "🤖 AI Insights",
-        "📚 How It Works"
+        "💼 My Portfolio",
+        "📚 How It Works",
+        "⚖️ Legal"
     ])
     
     with tab1:
@@ -3254,6 +3316,105 @@ TOTAL_STOCKS = {len(config.STOCK_UNIVERSE)}
             "</div>",
             unsafe_allow_html=True
         )
+
+
+    with tab8:
+        st.markdown("### 💼 My Portfolio")
+        
+        auth = st.session_state.auth
+        if not auth.is_authenticated():
+            st.warning("🔒 Please log in to access portfolio tracking.")
+            st.info("💡 Create an account in the sidebar to save your portfolios and track performance.")
+        else:
+            user_id = st.session_state.user_id
+            db = st.session_state.db
+            
+            # Get user portfolios
+            portfolios = db.get_user_portfolios(user_id)
+            
+            # Portfolio management
+            col1, col2 = st.columns([2, 1])
+            with col1:
+                st.markdown("#### 📊 Your Portfolios")
+            with col2:
+                if st.button("➕ New Portfolio", use_container_width=True):
+                    st.session_state.show_new_portfolio = True
+            
+            if st.session_state.get('show_new_portfolio', False):
+                with st.form("new_portfolio_form"):
+                    portfolio_name = st.text_input("Portfolio Name", value="My Portfolio")
+                    initial_capital = st.number_input("Initial Capital ($)", min_value=1000, value=100000, step=1000)
+                    create_portfolio = st.form_submit_button("Create Portfolio", use_container_width=True)
+                    
+                    if create_portfolio:
+                        portfolio_id = db.create_portfolio(user_id, portfolio_name, initial_capital)
+                        if portfolio_id:
+                            st.success(f"Portfolio '{portfolio_name}' created!")
+                            st.session_state.show_new_portfolio = False
+                            st.rerun()
+                        else:
+                            st.error("Failed to create portfolio")
+            
+            if portfolios:
+                for portfolio in portfolios:
+                    with st.expander(f"📁 {portfolio['name']} - ${portfolio['initial_capital']:,.2f}"):
+                        positions = db.get_portfolio_positions(portfolio['id'])
+                        trades = db.get_user_recommendations(user_id, limit=10)
+                        
+                        if positions:
+                            st.markdown("#### Current Positions")
+                            pos_data = []
+                            for pos in positions:
+                                pos_data.append({
+                                    "Symbol": pos['symbol'],
+                                    "Shares": pos['shares'],
+                                    "Entry Price": f"${pos['entry_price']:.2f}",
+                                    "Entry Date": pos['entry_date']
+                                })
+                            st.dataframe(pd.DataFrame(pos_data), use_container_width=True, hide_index=True)
+                        else:
+                            st.info("No positions yet. Add stocks from recommendations to track your portfolio.")
+                        
+                        if trades:
+                            st.markdown("#### Recent Recommendations")
+                            trade_data = []
+                            for trade in trades[:5]:
+                                trade_data.append({
+                                    "Symbol": trade['symbol'],
+                                    "Action": trade['recommendation'],
+                                    "Entry": f"${trade['entry_price']:.2f}" if trade['entry_price'] else "N/A",
+                                    "Target": f"${trade['target_price']:.2f}" if trade['target_price'] else "N/A",
+                                    "Score": f"{trade['score']:.1f}" if trade['score'] else "N/A",
+                                    "Date": trade['created_at']
+                                })
+                            st.dataframe(pd.DataFrame(trade_data), use_container_width=True, hide_index=True)
+            else:
+                st.info("💡 You don't have any portfolios yet. Create one to start tracking your investments!")
+                st.markdown("""
+                **Portfolio tracking features:**
+                - Track your stock positions
+                - Monitor entry prices and dates
+                - View recommendation history
+                - Calculate portfolio performance (coming soon)
+                """)
+    
+    with tab9:
+        st.markdown("### ⚖️ Legal Information")
+        
+        legal_tab1, legal_tab2 = st.tabs(["Terms of Service", "Privacy Policy"])
+        
+        with legal_tab1:
+            st.markdown(get_terms_of_service())
+        
+        with legal_tab2:
+            st.markdown(get_privacy_policy())
+        
+        st.markdown("---")
+        st.info("""
+        **Questions about our legal policies?**
+        
+        Contact us through the GitHub repository or app support channels.
+        """)
 
 
 if __name__ == "__main__":

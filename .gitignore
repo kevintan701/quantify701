@@ -40,6 +40,12 @@ Thumbs.db
 # Streamlit
 .streamlit/secrets.toml
 
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+quantify701.db
+
 # Jupyter
 .ipynb_checkpoints/
 
