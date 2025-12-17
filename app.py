@@ -882,6 +882,8 @@ def initialize_session_state():
         st.session_state.auth = AuthManager(st.session_state.db)
     if 'show_new_portfolio' not in st.session_state:
         st.session_state.show_new_portfolio = False
+    if 'show_premium' not in st.session_state:
+        st.session_state.show_premium = False
 
 
 def add_to_watchlist(symbol: str):
@@ -1201,21 +1203,104 @@ def main():
     )
     st.markdown("---")
     
+    # Premium Plans Modal (if triggered)
+    if st.session_state.get('show_premium', False):
+        with st.container():
+            st.markdown("### 💎 Premium Plans")
+            st.markdown("Upgrade your account to unlock advanced features!")
+            
+            plan_col1, plan_col2, plan_col3 = st.columns(3)
+            
+            with plan_col1:
+                st.markdown("""
+                #### 🆓 Free
+                **$0/month**
+                
+                ✅ Basic stock analysis
+                ✅ Limited stock universe (37 stocks)
+                ✅ Portfolio tracking
+                ✅ Watchlists
+                ✅ CSV export
+                ✅ Recommendation history
+                """)
+                if not auth.is_authenticated():
+                    st.info("Current Plan")
+            
+            with plan_col2:
+                st.markdown("""
+                #### ⭐ Pro
+                **$9.99/month**
+                
+                ✅ Everything in Free
+                ✅ Unlimited stock universe
+                ✅ Real-time data updates
+                ✅ Email alerts
+                ✅ Advanced analytics
+                ✅ Priority support
+                ✅ Backtesting (coming soon)
+                """)
+                if auth.is_authenticated() and user_tier == 'FREE':
+                    if st.button("Upgrade to Pro", key="upgrade_pro", use_container_width=True, type="primary"):
+                        st.info("💡 Payment integration coming soon! Contact us for early access.")
+                elif not auth.is_authenticated():
+                    st.warning("Login required")
+            
+            with plan_col3:
+                st.markdown("""
+                #### 💎 Premium
+                **$29.99/month**
+                
+                ✅ Everything in Pro
+                ✅ Backtesting engine
+                ✅ API access
+                ✅ Mobile app
+                ✅ Advanced ML models
+                ✅ Custom strategies
+                ✅ White-label options
+                """)
+                if auth.is_authenticated() and user_tier == 'FREE':
+                    if st.button("Upgrade to Premium", key="upgrade_premium", use_container_width=True, type="primary"):
+                        st.info("💡 Payment integration coming soon! Contact us for early access.")
+                elif not auth.is_authenticated():
+                    st.warning("Login required")
+            
+            st.markdown("---")
+            if st.button("Close", use_container_width=True):
+                st.session_state.show_premium = False
+                st.rerun()
+            
+            st.markdown("---")
+    
     # Sidebar for controls with enhanced organization
     with st.sidebar:
         # Authentication Section
         auth = st.session_state.auth
         if auth.is_authenticated():
             user = auth.get_current_user()
+            user_tier = user.get('subscription_tier', 'free').upper()
+            tier_colors = {
+                'FREE': 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                'PRO': 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                'PREMIUM': 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
+            }
+            tier_color = tier_colors.get(user_tier, tier_colors['FREE'])
+            
             st.markdown(f"""
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            <div style="background: {tier_color}; 
                         padding: 1rem; border-radius: 8px; margin-bottom: 1rem; color: white;">
                 <p style="margin: 0; font-weight: 600;">👤 {user['username']}</p>
                 <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; opacity: 0.9;">
-                    {user.get('subscription_tier', 'free').upper()} Plan
+                    {user_tier} Plan
                 </p>
             </div>
             """, unsafe_allow_html=True)
+            
+            # Show upgrade button if on free plan
+            if user_tier == 'FREE':
+                if st.button("⭐ Upgrade to Premium", use_container_width=True, type="primary"):
+                    st.session_state.show_premium = True
+                    st.rerun()
+            
             if st.button("🚪 Logout", use_container_width=True):
                 auth.logout()
         else:
@@ -1251,6 +1336,52 @@ def main():
                             st.rerun()
                         else:
                             st.error(message)
+            
+            # Show premium plans info for non-authenticated users
+            with st.expander("💎 View Premium Plans", expanded=False):
+                st.markdown("### 🚀 Subscription Plans")
+                
+                plan_col1, plan_col2, plan_col3 = st.columns(3)
+                
+                with plan_col1:
+                    st.markdown("""
+                    #### 🆓 Free
+                    **$0/month**
+                    
+                    ✅ Basic stock analysis
+                    ✅ Limited stock universe (37 stocks)
+                    ✅ Portfolio tracking
+                    ✅ Watchlists
+                    ✅ CSV export
+                    """)
+                
+                with plan_col2:
+                    st.markdown("""
+                    #### ⭐ Pro
+                    **$9.99/month**
+                    
+                    ✅ Everything in Free
+                    ✅ Unlimited stock universe
+                    ✅ Real-time data updates
+                    ✅ Email alerts
+                    ✅ Advanced analytics
+                    ✅ Priority support
+                    """)
+                
+                with plan_col3:
+                    st.markdown("""
+                    #### 💎 Premium
+                    **$29.99/month**
+                    
+                    ✅ Everything in Pro
+                    ✅ Backtesting engine
+                    ✅ API access
+                    ✅ Mobile app
+                    ✅ Advanced ML models
+                    ✅ Custom strategies
+                    """)
+                
+                st.info("💡 **Premium plans coming soon!** Sign up now to get early access and special pricing.")
             
             st.markdown("---")
         
@@ -3004,6 +3135,151 @@ def main():
                                     st.markdown(insight)
     
     with tab7:
+        st.markdown("### 💼 My Portfolio")
+        
+        auth = st.session_state.auth
+        if not auth.is_authenticated():
+            st.warning("🔒 Please log in to access portfolio tracking.")
+            st.info("💡 Create an account in the sidebar to save your portfolios and track performance.")
+            
+            st.markdown("---")
+            st.markdown("#### 🎯 Benefits of Creating an Account")
+            benefits_col1, benefits_col2 = st.columns(2)
+            
+            with benefits_col1:
+                st.markdown("""
+                **✨ Free Account Features:**
+                - 💼 Create unlimited portfolios
+                - 📊 Track your stock positions
+                - 📈 Save recommendation history
+                - ⭐ Personal watchlists
+                - 💾 Data persistence across sessions
+                - 📧 Email alerts (coming soon)
+                """)
+            
+            with benefits_col2:
+                st.markdown("""
+                **🚀 Premium Features (Coming Soon):**
+                - 🔄 Real-time data updates
+                - 📊 Advanced analytics & backtesting
+                - 🎯 Unlimited stock universe
+                - 📱 Mobile app access
+                - 🔔 Priority support
+                - 📈 Performance tracking
+                """)
+        else:
+            user_id = st.session_state.user_id
+            db = st.session_state.db
+            
+            # Get user portfolios
+            portfolios = db.get_user_portfolios(user_id)
+            
+            # Portfolio management
+            col1, col2 = st.columns([2, 1])
+            with col1:
+                st.markdown("#### 📊 Your Portfolios")
+            with col2:
+                if st.button("➕ New Portfolio", use_container_width=True):
+                    st.session_state.show_new_portfolio = True
+            
+            if st.session_state.get('show_new_portfolio', False):
+                with st.form("new_portfolio_form"):
+                    portfolio_name = st.text_input("Portfolio Name", value="My Portfolio")
+                    initial_capital = st.number_input("Initial Capital ($)", min_value=1000, value=100000, step=1000)
+                    create_portfolio = st.form_submit_button("Create Portfolio", use_container_width=True)
+                    
+                    if create_portfolio:
+                        portfolio_id = db.create_portfolio(user_id, portfolio_name, initial_capital)
+                        if portfolio_id:
+                            st.success(f"Portfolio '{portfolio_name}' created!")
+                            st.session_state.show_new_portfolio = False
+                            st.rerun()
+                        else:
+                            st.error("Failed to create portfolio")
+            
+            if portfolios:
+                for portfolio in portfolios:
+                    with st.expander(f"📁 {portfolio['name']} - ${portfolio['initial_capital']:,.2f}"):
+                        positions = db.get_portfolio_positions(portfolio['id'])
+                        trades = db.get_user_recommendations(user_id, limit=10)
+                        
+                        if positions:
+                            st.markdown("#### Current Positions")
+                            pos_data = []
+                            for pos in positions:
+                                pos_data.append({
+                                    "Symbol": pos['symbol'],
+                                    "Shares": pos['shares'],
+                                    "Entry Price": f"${pos['entry_price']:.2f}",
+                                    "Entry Date": pos['entry_date']
+                                })
+                            st.dataframe(pd.DataFrame(pos_data), use_container_width=True, hide_index=True)
+                        else:
+                            st.info("No positions yet. Add stocks from recommendations to track your portfolio.")
+                        
+                        if trades:
+                            st.markdown("#### Recent Recommendations")
+                            trade_data = []
+                            for trade in trades[:5]:
+                                trade_data.append({
+                                    "Symbol": trade['symbol'],
+                                    "Action": trade['recommendation'],
+                                    "Entry": f"${trade['entry_price']:.2f}" if trade['entry_price'] else "N/A",
+                                    "Target": f"${trade['target_price']:.2f}" if trade['target_price'] else "N/A",
+                                    "Score": f"{trade['score']:.1f}" if trade['score'] else "N/A",
+                                    "Date": trade['created_at']
+                                })
+                            st.dataframe(pd.DataFrame(trade_data), use_container_width=True, hide_index=True)
+            else:
+                st.info("💡 You don't have any portfolios yet. Create one to start tracking your investments!")
+                
+                st.markdown("---")
+                st.markdown("#### 🎯 Account Benefits")
+                
+                benefits_col1, benefits_col2 = st.columns(2)
+                
+                with benefits_col1:
+                    st.markdown("""
+                    **✨ What You Get with an Account:**
+                    - 💼 **Portfolio Tracking**: Create unlimited portfolios
+                    - 📊 **Position Management**: Track entry prices and dates
+                    - 📈 **History**: Save all your recommendations
+                    - ⭐ **Watchlists**: Personal stock lists
+                    - 💾 **Data Persistence**: Your data saved across sessions
+                    - 🔔 **Alerts**: Set price and signal alerts (coming soon)
+                    """)
+                
+                with benefits_col2:
+                    st.markdown("""
+                    **🚀 Premium Features (Coming Soon):**
+                    - 🔄 Real-time data updates
+                    - 📊 Advanced analytics & backtesting
+                    - 🎯 Unlimited stock universe
+                    - 📱 Mobile app access
+                    - 🔔 Priority email alerts
+                    - 📈 Performance tracking & reports
+                    - 🔌 API access for developers
+                    """)
+                
+                st.markdown("---")
+                st.markdown("""
+                **💡 Difference Between Free and Premium:**
+                
+                **Free Account:**
+                - Access to all current features
+                - Limited to 37 pre-selected stocks
+                - Basic portfolio tracking
+                - Standard data refresh rates
+                
+                **Premium Plans:**
+                - Unlimited stock analysis
+                - Real-time data updates
+                - Advanced features (backtesting, API, etc.)
+                - Priority support
+                - Early access to new features
+                """)
+    
+    with tab8:
         st.header("📚 Stock Selection Process Explained")
         
         st.markdown("""
@@ -3318,85 +3594,6 @@ TOTAL_STOCKS = {len(config.STOCK_UNIVERSE)}
         )
 
 
-    with tab8:
-        st.markdown("### 💼 My Portfolio")
-        
-        auth = st.session_state.auth
-        if not auth.is_authenticated():
-            st.warning("🔒 Please log in to access portfolio tracking.")
-            st.info("💡 Create an account in the sidebar to save your portfolios and track performance.")
-        else:
-            user_id = st.session_state.user_id
-            db = st.session_state.db
-            
-            # Get user portfolios
-            portfolios = db.get_user_portfolios(user_id)
-            
-            # Portfolio management
-            col1, col2 = st.columns([2, 1])
-            with col1:
-                st.markdown("#### 📊 Your Portfolios")
-            with col2:
-                if st.button("➕ New Portfolio", use_container_width=True):
-                    st.session_state.show_new_portfolio = True
-            
-            if st.session_state.get('show_new_portfolio', False):
-                with st.form("new_portfolio_form"):
-                    portfolio_name = st.text_input("Portfolio Name", value="My Portfolio")
-                    initial_capital = st.number_input("Initial Capital ($)", min_value=1000, value=100000, step=1000)
-                    create_portfolio = st.form_submit_button("Create Portfolio", use_container_width=True)
-                    
-                    if create_portfolio:
-                        portfolio_id = db.create_portfolio(user_id, portfolio_name, initial_capital)
-                        if portfolio_id:
-                            st.success(f"Portfolio '{portfolio_name}' created!")
-                            st.session_state.show_new_portfolio = False
-                            st.rerun()
-                        else:
-                            st.error("Failed to create portfolio")
-            
-            if portfolios:
-                for portfolio in portfolios:
-                    with st.expander(f"📁 {portfolio['name']} - ${portfolio['initial_capital']:,.2f}"):
-                        positions = db.get_portfolio_positions(portfolio['id'])
-                        trades = db.get_user_recommendations(user_id, limit=10)
-                        
-                        if positions:
-                            st.markdown("#### Current Positions")
-                            pos_data = []
-                            for pos in positions:
-                                pos_data.append({
-                                    "Symbol": pos['symbol'],
-                                    "Shares": pos['shares'],
-                                    "Entry Price": f"${pos['entry_price']:.2f}",
-                                    "Entry Date": pos['entry_date']
-                                })
-                            st.dataframe(pd.DataFrame(pos_data), use_container_width=True, hide_index=True)
-                        else:
-                            st.info("No positions yet. Add stocks from recommendations to track your portfolio.")
-                        
-                        if trades:
-                            st.markdown("#### Recent Recommendations")
-                            trade_data = []
-                            for trade in trades[:5]:
-                                trade_data.append({
-                                    "Symbol": trade['symbol'],
-                                    "Action": trade['recommendation'],
-                                    "Entry": f"${trade['entry_price']:.2f}" if trade['entry_price'] else "N/A",
-                                    "Target": f"${trade['target_price']:.2f}" if trade['target_price'] else "N/A",
-                                    "Score": f"{trade['score']:.1f}" if trade['score'] else "N/A",
-                                    "Date": trade['created_at']
-                                })
-                            st.dataframe(pd.DataFrame(trade_data), use_container_width=True, hide_index=True)
-            else:
-                st.info("💡 You don't have any portfolios yet. Create one to start tracking your investments!")
-                st.markdown("""
-                **Portfolio tracking features:**
-                - Track your stock positions
-                - Monitor entry prices and dates
-                - View recommendation history
-                - Calculate portfolio performance (coming soon)
-                """)
     
     with tab9:
         st.markdown("### ⚖️ Legal Information")
