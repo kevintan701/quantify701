@@ -1203,11 +1203,20 @@ def main():
     )
     st.markdown("---")
     
+    # Get auth early (needed for premium modal)
+    auth = st.session_state.auth
+    
     # Premium Plans Modal (if triggered)
     if st.session_state.get('show_premium', False):
         with st.container():
             st.markdown("### 💎 Premium Plans")
             st.markdown("Upgrade your account to unlock advanced features!")
+            
+            # Get user tier if authenticated
+            user_tier = None
+            if auth.is_authenticated():
+                user = auth.get_current_user()
+                user_tier = user.get('subscription_tier', 'free').upper() if user else None
             
             plan_col1, plan_col2, plan_col3 = st.columns(3)
             
@@ -1274,7 +1283,6 @@ def main():
     # Sidebar for controls with enhanced organization
     with st.sidebar:
         # Authentication Section
-        auth = st.session_state.auth
         if auth.is_authenticated():
             user = auth.get_current_user()
             user_tier = user.get('subscription_tier', 'free').upper()
