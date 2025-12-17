@@ -11,6 +11,9 @@ plotly>=5.17.0
 # Web UI framework
 streamlit>=1.28.0
 
+# Utilities and performance
+# Note: concurrent.futures is part of Python standard library (no install needed)
+
 # AI/ML capabilities (for future expansion)
 # Note: Currently using rule-based AI. Uncomment below for LLM integration:
 # openai>=1.0.0  # For OpenAI API integration

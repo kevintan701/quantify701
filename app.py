@@ -644,6 +644,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 
+@st.cache_data(ttl=86400)  # Cache for 24 hours (strategy presets don't change)
 def get_strategy_presets():
     """Define strategy presets with different filter configurations."""
     return {
@@ -795,7 +796,7 @@ def calculate_adaptive_min_data_points(period: str, interval: str) -> int:
     return adaptive_min
 
 
-@st.cache_data(ttl=3600)  # Cache for 1 hour
+@st.cache_data(ttl=3600, show_spinner=False)  # Cache for 1 hour
 def get_stock_data(custom_filters=None, period="1y", interval="1d"):
     """
     Fetch and analyze stocks with caching.
@@ -830,6 +831,7 @@ def get_stock_data(custom_filters=None, period="1y", interval="1d"):
     return qualified_stocks, data_fetcher
 
 
+@st.cache_data(ttl=3600)  # Cache for 1 hour
 def create_stocks_dataframe(stocks):
     """Convert stock list to DataFrame for display with enhanced formatting."""
     data = []
@@ -1507,18 +1509,21 @@ def main():
         status_text = st.empty()
         
         status_text.text(f"🔄 Initializing analysis...")
+        progress_bar.progress(5)
+        
+        status_text.text(f"📊 Preparing to analyze {len(config.STOCK_UNIVERSE)} stocks...")
         progress_bar.progress(10)
         
-        status_text.text(f"📊 Fetching data for {len(config.STOCK_UNIVERSE)} stocks...")
-        progress_bar.progress(30)
+        # Show loading state with better progress tracking
+        status_text.text(f"🔄 **Analyzing stocks...** Fetching {selected_period_label.lower()} data with {selected_interval_label.lower()} intervals. This may take a minute.")
+        progress_bar.progress(20)
         
-        # Show loading state
-        with st.spinner(f"🔄 **Analyzing stocks...** Fetching {selected_period_label.lower()} data with {selected_interval_label.lower()} intervals. This may take a minute."):
-            qualified_stocks, data_fetcher = get_stock_data(
-                custom_filters=custom_filters,
-                period=selected_period,
-                interval=selected_interval
-            )
+        # Fetch data (now with parallel processing for better performance)
+        qualified_stocks, data_fetcher = get_stock_data(
+            custom_filters=custom_filters,
+            period=selected_period,
+            interval=selected_interval
+        )
         
         progress_bar.progress(90)
         status_text.text(f"✅ Analysis complete! Found {len(qualified_stocks)} qualified stocks.")

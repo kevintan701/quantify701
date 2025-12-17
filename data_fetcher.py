@@ -8,7 +8,12 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
+import logging
 import config
+from utils import retry_on_failure, rate_limit, setup_logging
+
+# Set up logging
+logger = setup_logging()
 
 
 class DataFetcher:
@@ -22,6 +27,8 @@ class DataFetcher:
         self.cache = {}  # Simple cache to avoid redundant API calls
         self.cache_timeout = timedelta(hours=config.UPDATE_INTERVAL_HOURS)
     
+    @retry_on_failure(max_attempts=3, delay=1.0, backoff=2.0)
+    @rate_limit(max_calls_per_minute=60)
     def get_stock_data(
         self, 
         symbol: str, 
@@ -29,7 +36,7 @@ class DataFetcher:
         interval: str = "1d"
     ) -> Optional[pd.DataFrame]:
         """
-        Fetch historical stock data for a given symbol.
+        Fetch historical stock data for a given symbol with retry logic and rate limiting.
         
         Args:
             symbol: Stock ticker symbol (e.g., "AAPL")
@@ -45,23 +52,26 @@ class DataFetcher:
             if cache_key in self.cache:
                 cached_data, cached_time = self.cache[cache_key]
                 if datetime.now() - cached_time < self.cache_timeout:
+                    logger.debug(f"Cache hit for {symbol}")
                     return cached_data.copy()
             
             # Fetch data from yfinance
+            logger.debug(f"Fetching data for {symbol} ({period}, {interval})")
             ticker = yf.Ticker(symbol)
             data = ticker.history(period=period, interval=interval)
             
             if data.empty:
-                print(f"Warning: No data returned for {symbol}")
+                logger.warning(f"No data returned for {symbol}")
                 return None
             
             # Store in cache
             self.cache[cache_key] = (data.copy(), datetime.now())
+            logger.debug(f"Successfully fetched and cached data for {symbol}")
             
             return data
             
         except Exception as e:
-            print(f"Error fetching data for {symbol}: {str(e)}")
+            logger.error(f"Error fetching data for {symbol}: {str(e)}", exc_info=True)
             return None
     
     def get_multiple_stocks(
@@ -155,9 +165,11 @@ class DataFetcher:
         
         return rsi
     
+    @retry_on_failure(max_attempts=3, delay=1.0, backoff=2.0)
+    @rate_limit(max_calls_per_minute=60)
     def get_stock_info(self, symbol: str) -> Optional[Dict]:
         """
-        Get fundamental information about a stock.
+        Get fundamental information about a stock with retry logic and rate limiting.
         
         Args:
             symbol: Stock ticker symbol
@@ -166,6 +178,7 @@ class DataFetcher:
             Dictionary with stock info (market cap, sector, etc.) or None
         """
         try:
+            logger.debug(f"Fetching info for {symbol}")
             ticker = yf.Ticker(symbol)
             info = ticker.info
             
@@ -182,10 +195,11 @@ class DataFetcher:
                 'dividend_yield': info.get('dividendYield', 0),
             }
             
+            logger.debug(f"Successfully fetched info for {symbol}")
             return stock_info
             
         except Exception as e:
-            print(f"Error fetching info for {symbol}: {str(e)}")
+            logger.error(f"Error fetching info for {symbol}: {str(e)}", exc_info=True)
             return None
     
     def get_latest_price(self, symbol: str) -> Optional[float]:

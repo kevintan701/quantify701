@@ -6,8 +6,13 @@ Applies various criteria to filter and rank stocks for trading.
 import pandas as pd
 import numpy as np
 from typing import List, Dict, Optional
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from data_fetcher import DataFetcher
 import config
+from utils import setup_logging
+
+# Set up logging
+logger = setup_logging()
 
 
 class StockSelector:
@@ -68,64 +73,129 @@ class StockSelector:
         # Use custom filters if provided, otherwise use instance filters
         filters = custom_filters if custom_filters else self.filter_params
         
-        qualified_stocks = []
+        logger.info(f"Evaluating {len(symbols)} stocks with filters: {filters}")
         
-        # Only print if not in Streamlit environment
-        import sys
-        if 'streamlit' not in sys.modules:
-            print(f"Evaluating {len(symbols)} stocks...")
-        
-        for symbol in symbols:
-            try:
-                # Get stock data with specified period and interval
-                data = self.data_fetcher.get_stock_data(symbol, period=period, interval=interval)
-                if data is None or data.empty:
-                    continue
-                
-                # Calculate technical indicators
-                data = self.data_fetcher.calculate_technical_indicators(data)
-                
-                # Get fundamental info
-                info = self.data_fetcher.get_stock_info(symbol)
-                if info is None:
-                    continue
-                
-                # Apply filters
-                if not self._passes_filters(data, info, filters):
-                    continue
-                
-                # Calculate score
-                score = self._calculate_score(data, info)
-                
-                # Store qualified stock
-                stock_data = {
-                    'symbol': symbol,
-                    'score': score,
-                    'current_price': float(data['Close'].iloc[-1]),
-                    'rsi': float(data['RSI'].iloc[-1]) if not pd.isna(data['RSI'].iloc[-1]) else None,
-                    'momentum': float(data['Momentum'].iloc[-1]) if not pd.isna(data['Momentum'].iloc[-1]) else None,
-                    'volume_ratio': float(data['Volume_Ratio'].iloc[-1]) if not pd.isna(data['Volume_Ratio'].iloc[-1]) else None,
-                    'market_cap': info.get('market_cap', 0),
-                    'sector': info.get('sector', 'Unknown'),
-                    'data': data  # Store full data for strategy use
-                }
-                
-                qualified_stocks.append(stock_data)
-                
-            except Exception as e:
-                # Only print if not in Streamlit environment
-                import sys
-                if 'streamlit' not in sys.modules:
-                    print(f"Error processing {symbol}: {str(e)}")
-                continue
+        # Use parallel processing for better performance
+        qualified_stocks = self._filter_stocks_parallel(
+            symbols, filters, period, interval
+        )
         
         # Sort by score (highest first)
         qualified_stocks.sort(key=lambda x: x['score'], reverse=True)
         
-        # Only print if not in Streamlit environment
-        import sys
-        if 'streamlit' not in sys.modules:
-            print(f"Found {len(qualified_stocks)} qualified stocks")
+        logger.info(f"Found {len(qualified_stocks)} qualified stocks")
+        
+        return qualified_stocks
+    
+    def _process_single_stock(
+        self, 
+        symbol: str, 
+        filters: Dict, 
+        period: str, 
+        interval: str
+    ) -> Optional[Dict]:
+        """
+        Process a single stock (used for parallel processing).
+        
+        Args:
+            symbol: Stock symbol to process
+            filters: Filter parameters
+            period: Time period for data
+            interval: Data interval
+        
+        Returns:
+            Stock data dictionary if qualified, None otherwise
+        """
+        try:
+            # Get stock data with specified period and interval
+            data = self.data_fetcher.get_stock_data(symbol, period=period, interval=interval)
+            if data is None or data.empty:
+                logger.debug(f"No data for {symbol}")
+                return None
+            
+            # Calculate technical indicators
+            data = self.data_fetcher.calculate_technical_indicators(data)
+            
+            # Get fundamental info
+            info = self.data_fetcher.get_stock_info(symbol)
+            if info is None:
+                logger.debug(f"No info for {symbol}")
+                return None
+            
+            # Apply filters
+            if not self._passes_filters(data, info, filters):
+                logger.debug(f"{symbol} did not pass filters")
+                return None
+            
+            # Calculate score
+            score = self._calculate_score(data, info)
+            
+            # Store qualified stock
+            stock_data = {
+                'symbol': symbol,
+                'score': score,
+                'current_price': float(data['Close'].iloc[-1]),
+                'rsi': float(data['RSI'].iloc[-1]) if not pd.isna(data['RSI'].iloc[-1]) else None,
+                'momentum': float(data['Momentum'].iloc[-1]) if not pd.isna(data['Momentum'].iloc[-1]) else None,
+                'volume_ratio': float(data['Volume_Ratio'].iloc[-1]) if not pd.isna(data['Volume_Ratio'].iloc[-1]) else None,
+                'market_cap': info.get('market_cap', 0),
+                'sector': info.get('sector', 'Unknown'),
+                'data': data  # Store full data for strategy use
+            }
+            
+            logger.debug(f"{symbol} qualified with score {score:.1f}")
+            return stock_data
+            
+        except Exception as e:
+            logger.error(f"Error processing {symbol}: {str(e)}", exc_info=True)
+            return None
+    
+    def _filter_stocks_parallel(
+        self, 
+        symbols: List[str], 
+        filters: Dict, 
+        period: str, 
+        interval: str,
+        max_workers: int = 5
+    ) -> List[Dict]:
+        """
+        Filter stocks using parallel processing for better performance.
+        
+        Args:
+            symbols: List of stock symbols
+            filters: Filter parameters
+            period: Time period for data
+            interval: Data interval
+            max_workers: Maximum number of parallel workers
+        
+        Returns:
+            List of qualified stock dictionaries
+        """
+        qualified_stocks = []
+        
+        # Use ThreadPoolExecutor for parallel processing
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Submit all tasks
+            future_to_symbol = {
+                executor.submit(
+                    self._process_single_stock, 
+                    symbol, 
+                    filters, 
+                    period, 
+                    interval
+                ): symbol 
+                for symbol in symbols
+            }
+            
+            # Process results as they complete
+            for future in as_completed(future_to_symbol):
+                symbol = future_to_symbol[future]
+                try:
+                    result = future.result()
+                    if result is not None:
+                        qualified_stocks.append(result)
+                except Exception as e:
+                    logger.error(f"Exception for {symbol}: {str(e)}", exc_info=True)
         
         return qualified_stocks
     
