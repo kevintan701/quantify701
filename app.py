@@ -1718,26 +1718,44 @@ def main():
         progress_bar.progress(20)
         
         # Fetch data (now with parallel processing for better performance)
-        qualified_stocks, data_fetcher = get_stock_data(
-            custom_filters=custom_filters,
-            period=selected_period,
-            interval=selected_interval
-        )
-        
-        progress_bar.progress(90)
-        status_text.text(f"✅ Analysis complete! Found {len(qualified_stocks)} qualified stocks.")
-        progress_bar.progress(100)
-        
-        # Clear progress indicators
-        time.sleep(0.5)
-        progress_bar.empty()
-        status_text.empty()
-        
-        # Show success message with adaptive data points info
-        success_msg = st.success(
-            f"✅ **Analysis complete!** Found {len(qualified_stocks)} qualified stocks using {selected_period_label.lower()} data. "
-            f"(Minimum data points required: {adaptive_min_points})"
-        )
+        try:
+            qualified_stocks, data_fetcher = get_stock_data(
+                custom_filters=custom_filters,
+                period=selected_period,
+                interval=selected_interval
+            )
+            
+            progress_bar.progress(90)
+            status_text.text(f"✅ Analysis complete! Found {len(qualified_stocks)} qualified stocks.")
+            progress_bar.progress(100)
+            
+            # Clear progress indicators
+            time.sleep(0.5)
+            progress_bar.empty()
+            status_text.empty()
+            
+            # Show success message with adaptive data points info
+            if qualified_stocks:
+                success_msg = st.success(
+                    f"✅ **Analysis complete!** Found {len(qualified_stocks)} qualified stocks using {selected_period_label.lower()} data. "
+                    f"(Minimum data points required: {adaptive_min_points})"
+                )
+            else:
+                # Show warning if no stocks found
+                st.warning(
+                    f"⚠️ **No stocks qualified** with current filters. "
+                    f"Try adjusting your strategy or filters in the sidebar."
+                )
+        except Exception as e:
+            progress_bar.empty()
+            status_text.empty()
+            st.error(f"❌ **Error during analysis**: {str(e)}")
+            st.info("💡 Try refreshing the page or adjusting your filter settings.")
+            import traceback
+            with st.expander("🔍 Technical Details"):
+                st.code(traceback.format_exc())
+            qualified_stocks = []
+            data_fetcher = DataFetcher()
         
         st.session_state.qualified_stocks = qualified_stocks
         st.session_state.data_fetcher = data_fetcher
@@ -1754,7 +1772,83 @@ def main():
             st.session_state.chart_type = chart_type_lower
     
     if not qualified_stocks:
-        st.error("No qualified stocks found. Please check your configuration.")
+        st.error("❌ **No qualified stocks found**")
+        st.markdown("---")
+        
+        st.markdown("### 🔍 Troubleshooting Guide")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("""
+            **Possible Causes:**
+            - 📊 Filters are too strict
+            - ⏰ Insufficient data for selected time period
+            - 📈 Market conditions don't match criteria
+            - 🔧 Strategy preset is too restrictive
+            """)
+        
+        with col2:
+            st.markdown("""
+            **Try These Solutions:**
+            1. ⬇️ Lower the minimum score filter
+            2. 🔄 Try a different strategy preset
+            3. ⏰ Select a longer time period (1 Year or more)
+            4. 📊 Adjust custom filters in sidebar
+            5. 🔓 Use "Default" strategy for more results
+            """)
+        
+        st.markdown("---")
+        st.info("""
+        **💡 Quick Fix:** 
+        - Go to sidebar → Select "Default" strategy
+        - Set "Time Period" to "1 Year" or longer
+        - Set "Minimum score filter" to 0 or leave empty
+        - Click "Run Analysis" again
+        """)
+        
+        # Show current filter settings
+        with st.expander("🔧 View Current Filter Settings"):
+            current_period = st.session_state.get('period', '1y')
+            current_interval = st.session_state.get('interval', '1d')
+            min_data_points = calculate_adaptive_min_data_points(current_period, current_interval)
+            
+            st.markdown(f"""
+            **Current Configuration:**
+            - Strategy: {st.session_state.get('selected_strategy', 'Default')}
+            - Time Period: {current_period}
+            - Data Interval: {current_interval}
+            - Minimum Score: {st.session_state.get('min_score', 0)}
+            - Minimum Data Points: {min_data_points}
+            - Stock Universe Size: {len(config.STOCK_UNIVERSE)} stocks
+            """)
+            
+            if st.session_state.get('custom_filters'):
+                st.markdown("**Custom Filters:**")
+                st.json(st.session_state.custom_filters)
+            
+            # Suggest fixes based on configuration
+            st.markdown("**💡 Suggested Fixes:**")
+            suggestions = []
+            
+            if current_period in ['1mo', '3mo']:
+                suggestions.append("⚠️ **Short time period**: Try '6 Months' or '1 Year' for more data points")
+            
+            if st.session_state.get('min_score', 0) > 70:
+                suggestions.append("⚠️ **High minimum score**: Lower it to 50 or below for more results")
+            
+            if st.session_state.get('selected_strategy') in ['Conservative', 'Value', 'Dividend Focus']:
+                suggestions.append("ℹ️ **Restrictive strategy**: Try 'Default' or 'Aggressive' for more results")
+            
+            if min_data_points > 150:
+                suggestions.append("⚠️ **High data point requirement**: Try a longer time period")
+            
+            if suggestions:
+                for suggestion in suggestions:
+                    st.markdown(suggestion)
+            else:
+                st.info("💡 Try adjusting the strategy preset or time period in the sidebar")
+        
         return
     
     # Generate buy signals
