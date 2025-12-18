@@ -652,15 +652,15 @@ def get_strategy_presets():
     """Define strategy presets with different filter configurations."""
     return {
         "Default": {
-            'min_market_cap': 10_000_000_000,
-            'min_volume': 1_000_000,
+            'min_market_cap': 5_000_000_000,  # Lowered from 10B to 5B for more stocks
+            'min_volume': 500_000,  # Lowered from 1M to 500K for more stocks
             'min_price': 5.0,
             'max_price': 1000.0,
-            'min_rsi': 25,
-            'max_rsi': 75,
-            'min_volume_ratio': 0.5,
-            'min_data_points': 200,
-            'max_volatility': 0.05
+            'min_rsi': 20,  # Lowered from 25 to 20 (allow more oversold)
+            'max_rsi': 80,  # Raised from 75 to 80 (allow more overbought)
+            'min_volume_ratio': 0.3,  # Lowered from 0.5 to 0.3 for more stocks
+            'min_data_points': 200,  # Will be overridden by adaptive calculation
+            'max_volatility': 0.08  # Raised from 0.05 to 0.08 (allow more volatility)
         },
         "Conservative": {
             'min_market_cap': 50_000_000_000,  # Larger companies

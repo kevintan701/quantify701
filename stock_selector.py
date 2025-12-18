@@ -122,6 +122,9 @@ class StockSelector:
                 logger.debug(f"No info for {symbol}")
                 return None
             
+            # Add symbol to info for logging purposes
+            info['symbol'] = symbol
+            
             # Apply filters
             if not self._passes_filters(data, info, filters):
                 logger.debug(f"{symbol} did not pass filters")
@@ -212,46 +215,55 @@ class StockSelector:
             True if stock passes all filters, False otherwise
         """
         if data.empty:
+            logger.debug("Filter failed: Empty data")
             return False
         
         # Use provided filters or instance filters
         f = filters if filters else self.filter_params
         
         latest = data.iloc[-1]
+        symbol = info.get('symbol', 'UNKNOWN')
         
         # Price filter
         current_price = float(latest['Close'])
         if current_price < f['min_price'] or current_price > f['max_price']:
+            logger.debug(f"{symbol}: Filter failed - Price {current_price:.2f} outside range [{f['min_price']}, {f['max_price']}]")
             return False
         
         # Market cap filter
         market_cap = info.get('market_cap', 0)
         if market_cap < f['min_market_cap']:
+            logger.debug(f"{symbol}: Filter failed - Market cap {market_cap/1e9:.2f}B < {f['min_market_cap']/1e9:.2f}B")
             return False
         
         # Volume filter
         volume = float(latest['Volume'])
         if volume < f['min_volume']:
+            logger.debug(f"{symbol}: Filter failed - Volume {volume:,.0f} < {f['min_volume']:,.0f}")
             return False
         
         # RSI filter (avoid extreme overbought/oversold)
         rsi = latest['RSI']
         if not pd.isna(rsi):
             if rsi < f['min_rsi'] or rsi > f['max_rsi']:
+                logger.debug(f"{symbol}: Filter failed - RSI {rsi:.1f} outside range [{f['min_rsi']}, {f['max_rsi']}]")
                 return False
         
         # Ensure we have enough data points
         if len(data) < f['min_data_points']:
+            logger.debug(f"{symbol}: Filter failed - Data points {len(data)} < {f['min_data_points']}")
             return False
         
         # Check for sufficient liquidity (volume ratio)
         volume_ratio = latest['Volume_Ratio']
         if not pd.isna(volume_ratio) and volume_ratio < f['min_volume_ratio']:
+            logger.debug(f"{symbol}: Filter failed - Volume ratio {volume_ratio:.2f} < {f['min_volume_ratio']}")
             return False
         
         # Volatility filter (avoid extremely volatile stocks)
         volatility = latest.get('Volatility', None)
         if not pd.isna(volatility) and volatility > f['max_volatility']:
+            logger.debug(f"{symbol}: Filter failed - Volatility {volatility:.4f} > {f['max_volatility']}")
             return False
         
         # Trend strength filter (prefer stocks with clear trends)
